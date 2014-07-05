@@ -1,0 +1,22 @@
+[project]
+
+name = "declmagic"
+version = "0.0.1"
+authors = ["Pierre Krieger <pierre.krieger1708@gmail.com>"]
+tags = []
+build = "make"
+
+[[lib]]
+name = "declmagic"
+
+[dependencies.rust_hl_lua]
+git = "https://github.com/Tomaka17/rust-hl-lua"
+
+#[dependencies.gl]
+#git = "https://github.com/bjz/gl-rs"
+
+#[dependencies.glfw]
+#git = "https://github.com/bjz/glfw-rs"
+
+[dependencies.ears]
+git = "https://github.com/jeremyletang/ears"

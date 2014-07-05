@@ -1,0 +1,6 @@
+[submodule "deps/nphysics"]
+	path = deps/nphysics
+	url = http://github.com/sebcrozet/nphysics
+[submodule "deps/stb-image"]
+	path = deps/stb-image
+	url = https://github.com/mozilla-servo/rust-stb-image
