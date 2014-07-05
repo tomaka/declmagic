@@ -2,6 +2,7 @@ extern crate std;
 
 use resources::ResourcesLoader;
 use serialize::json;
+use std::ascii::StrAsciiExt;
 use std::collections::{ HashSet, HashMap };
 use super::EntitiesState;
 use super::EntityID;
@@ -72,7 +73,7 @@ fn loadEntity(output: &mut EntitiesState, entity: &json::Json, loader: &Resource
 
 			match entityData.find(&"components".to_string()) {
 				Some(cmp) => { 
-					match loadComponents(output, &entityID, cmp, loader, loadedDocs) {
+					match loadComponentsList(output, &entityID, cmp, loader, loadedDocs) {
 						Ok(_) => (),
 						Err(err) => {
 							output.destroy_entity(&entityID);
@@ -89,7 +90,7 @@ fn loadEntity(output: &mut EntitiesState, entity: &json::Json, loader: &Resource
 	}
 }
 
-fn loadComponents(output: &mut EntitiesState, entity: &EntityID, componentsList: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn loadComponentsList(output: &mut EntitiesState, entity: &EntityID, componentsList: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<Vec<ComponentID>, String>
 {
 	match componentsList {
@@ -170,6 +171,29 @@ fn loadComponentDataElement(output: &mut EntitiesState, element: &json::Json, lo
 				result.push(val);
 			}
 			super::List(result)
+		},
+		&json::Object(ref data) => {
+			let (key, val) = match data.iter().next() {
+				None => return Err(format!("Empty object found for component data element")),
+				Some(a) => a
+			};
+
+			if key.as_slice().eq_ignore_ascii_case("prototype") {
+				let entityID = output.create_entity(None);
+
+				match loadComponentsList(output, &entityID, val, loader, loadedDocs) {
+					Ok(_) => (),
+					Err(err) => {
+						output.destroy_entity(&entityID);
+						return Err(err);
+					}
+				}
+
+				super::Entity(entityID)
+
+			} else {
+				return Err(format!("Got invalid key for component data element object: {}", key));
+			}
 		},
 		_ => return Err(format!("Wrong format for component data element, got {}", element))
 	})
