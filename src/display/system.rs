@@ -1,7 +1,7 @@
 use super::managed_display::ManagedDisplay;
 use entities::{ EntitiesState, EntityID, ComponentID, NativeComponentType };
 use nalgebra::na::{ Mat4, Vec3, Eye };
-use std::collections::HashMap;
+use std::collections::{ HashSet, HashMap };
 use std::sync::Arc;
 use super::sprite_displayer::SpriteDisplayer;
 use super::Drawable;
@@ -15,35 +15,16 @@ impl DisplaySystem {
 	pub fn new(display: Arc<ManagedDisplay>, state: &EntitiesState)
 		-> DisplaySystem
 	{
-		let mut system = DisplaySystem {
+		DisplaySystem {
 			display: display.clone(),
 			sprites: HashMap::new()
-		};
-
-		// building sprites
-		for spriteDisplayComponent in state.get_components_iter().filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "spriteDisplay", _ => false }) {
-			// getting the name of the texture
-			let textureName = match state.get(spriteDisplayComponent, "texture") { Ok(&::entities::String(ref s)) => s, _ => continue };
-
-			let mut spriteDisplayer = SpriteDisplayer::new(display.clone(), textureName.as_slice()).unwrap();
-
-			// getting coordinates
-			spriteDisplayer.set_rectangle_coords(
-				match state.get(spriteDisplayComponent, "leftX") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => -0.5 },
-				match state.get(spriteDisplayComponent, "topY") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 1.0 },
-				match state.get(spriteDisplayComponent, "rightX") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 0.5 },
-				match state.get(spriteDisplayComponent, "bottomY") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 0.0 }
-			);
-
-			// inserting in sprites list
-			system.sprites.insert(spriteDisplayComponent.clone(), spriteDisplayer);
 		}
-
-		system
 	}
 
 	pub fn draw(&mut self, state: &EntitiesState, elapsed: &u64)
 	{
+		self.update_sprite_displayers(state);
+
 		let camera = DisplaySystem::get_camera(state);
 
 	 	for (cmp, sprite) in self.sprites.iter() {
@@ -53,12 +34,53 @@ impl DisplaySystem {
 		}
 	}
 
+	fn update_sprite_displayers(&mut self, state: &EntitiesState)
+	{
+		// getting the list of all sprite displayer components
+		let listOfComponents = state.get_components_iter()
+            .filter(|c| state.is_component_visible(*c).unwrap())
+			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "spriteDisplay", _ => false })
+			.map(|c| c.clone())
+			.collect::<HashSet<EntityID>>();
+
+		// removing from the list the elements that have disappeared
+		{	let toRemove = self.sprites.keys().filter(|e| !listOfComponents.contains(e.clone())).map(|e| e.clone()).collect::<Vec<EntityID>>();
+			for c in toRemove.move_iter() {
+				self.sprites.remove(&c);
+			}
+		}
+
+		// adding elements that are not yet created
+		{	let toCreate = listOfComponents.iter().filter(|e| !self.sprites.contains_key(e.clone())).map(|e| e.clone()).collect::<Vec<EntityID>>();
+			for spriteDisplayComponent in toCreate.move_iter() {
+				// getting the name of the texture
+				let textureName = match state.get(&spriteDisplayComponent, "texture") { Ok(&::entities::String(ref s)) => s, _ => continue };
+
+				let mut spriteDisplayer = SpriteDisplayer::new(self.display.clone(), textureName.as_slice()).unwrap();
+
+				// getting coordinates
+				spriteDisplayer.set_rectangle_coords(
+					match state.get(&spriteDisplayComponent, "leftX") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => -0.5 },
+					match state.get(&spriteDisplayComponent, "topY") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 1.0 },
+					match state.get(&spriteDisplayComponent, "rightX") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 0.5 },
+					match state.get(&spriteDisplayComponent, "bottomY") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 0.0 }
+				);
+
+				// inserting in sprites list
+				self.sprites.insert(spriteDisplayComponent.clone(), spriteDisplayer);
+			}
+		}
+	}
+
 	/// returns the camera matrix of the scene
 	fn get_camera(state: &EntitiesState)
 		-> Mat4<f32>
 	{
 		state
 			.get_components_iter()
+
+			// filter out non-visible components
+			.filter(|c| state.is_component_visible(*c).unwrap())
 
 			// take only the "camera" components
 			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "camera", _ => false })
@@ -85,6 +107,9 @@ impl DisplaySystem {
 	{
 		state
 			.get_components_iter()
+
+			// filter out non-visible components
+			.filter(|c| state.is_component_visible(*c).unwrap())
 
 			// take only the components owned by the entity
 			.filter(|c| state.get_owner(*c).unwrap() == *id)

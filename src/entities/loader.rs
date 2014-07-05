@@ -69,7 +69,8 @@ fn loadEntity(output: &mut EntitiesState, entity: &json::Json, loader: &Resource
 	match entity {
 		&json::Object(ref entityData) => {
 			let name = entityData.find(&"name".to_string()).and_then(|e| e.as_string()).map(|e| e.to_string());
-			let entityID = output.create_entity(name);
+			let visible = entityData.find(&"visible".to_string()).and_then(|e| e.as_string()).map(|e| e == "true").unwrap_or(true);
+			let entityID = output.create_entity(name, visible);
 
 			match entityData.find(&"components".to_string()) {
 				Some(cmp) => { 
@@ -179,7 +180,7 @@ fn loadComponentDataElement(output: &mut EntitiesState, element: &json::Json, lo
 			};
 
 			if key.as_slice().eq_ignore_ascii_case("prototype") {
-				let entityID = output.create_entity(None);
+				let entityID = output.create_entity(None, false);
 
 				match loadComponentsList(output, &entityID, val, loader, loadedDocs) {
 					Ok(_) => (),

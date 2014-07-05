@@ -33,6 +33,7 @@ impl PhysicsSystem {
 	{
 		// getting the list of all entities that have physics activated
 		let listOfEntities: HashSet<EntityID> = state.get_components_iter()
+            .filter(|c| state.is_component_visible(*c).unwrap())
 			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "physics", _ => false })
 			.filter(|c| match state.get(*c, "activated") { Ok(&::entities::Boolean(ref b)) => *b, _ => false })
 			.map(|c| state.get_owner(c).unwrap())
