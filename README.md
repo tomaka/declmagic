@@ -58,7 +58,7 @@ The main file of your game is `resources/main.json`. For example:
 					        {
 					            "type": "movement",
 					            "data": { "x": 1, "y": 0 }
-					        },
+					        }
                     	]
                     }
                 }
@@ -72,7 +72,7 @@ The main file of your game is `resources/main.json`. For example:
 					        {
 					            "type": "movement",
 					            "data": { "x": -1, "y": 0 }
-					        },
+					        }
                     	]
                     }
                 }

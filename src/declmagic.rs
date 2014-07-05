@@ -28,10 +28,8 @@ mod physics;
 mod script;
 mod threaded_executer;
 
-pub fn exec_game<RL: resources::ResourcesLoader + Send>(resources: RL) {
-	let resources = Arc::new(Mutex::new(box resources as Box<resources::ResourcesLoader+Send>));
-
-	let display = Arc::new(display::managed_display::ManagedDisplay::new(display::raw::Display::new(1024, 768, "Game"), resources.clone()));
+pub fn exec_game<RL: resources::ResourcesLoader+Send+Share>(resources: RL) {
+	let display = Arc::new(display::managed_display::ManagedDisplay::new(display::raw::Display::new(1024, 768, "Game"), box resources.clone() as Box<resources::ResourcesLoader+Send+Share>));
 
 	let mut timer = ::std::io::timer::Timer::new().unwrap();
 	let period = 1000 / 60;
@@ -39,8 +37,7 @@ pub fn exec_game<RL: resources::ResourcesLoader + Send>(resources: RL) {
 
 	let mut state = entities::EntitiesState::new();
 
-	let lock = resources.lock();
-	entities::loader::load(*lock, "main", &mut state).unwrap();
+	entities::loader::load(&resources, "main", &mut state).unwrap();
 
 	let mut displaySystem = display::DisplaySystem::new(display.clone(), &state);
 	let mut inputSystem = input::InputSystem::new(&state);

@@ -4,6 +4,7 @@ use std::path::Path;
 use super::libarchive;
 use super::ResourcesLoader;
 
+#[deriving(Clone)]
 pub struct DirLoader {
 	directory: Path
 }

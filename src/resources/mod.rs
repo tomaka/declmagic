@@ -8,6 +8,6 @@ mod libarchive;
 pub mod archive_loader;
 pub mod dir_loader;
 
-pub trait ResourcesLoader {
+pub trait ResourcesLoader : Clone {
 	fn load(&self, resourceName: &str) -> IoResult<Box<Reader>>;
 }

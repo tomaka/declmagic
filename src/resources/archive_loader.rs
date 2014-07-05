@@ -2,6 +2,7 @@ use std::io::{ IoResult, Reader };
 use super::libarchive;
 use super::ResourcesLoader;
 
+#[deriving(Clone)]
 pub struct MemoryArchiveLoader {
 	data: &'static [u8]
 }

@@ -11,7 +11,7 @@ use resources::ResourcesLoader;
 
 pub struct ManagedDisplay {
 	display: Display,
-	loader: Arc<Mutex<Box<ResourcesLoader+Send>>>,
+	loader: Box<ResourcesLoader+Send+Share>,
 	textures: Mutex<HashMap<String, ::std::sync::Weak<super::raw::Texture>>>
 }
 
@@ -20,7 +20,7 @@ pub struct Texture {
 }
 
 impl ManagedDisplay {
-	pub fn new(display: Display, loader: Arc<Mutex<Box<ResourcesLoader+Send>>>)
+	pub fn new(display: Display, loader: Box<ResourcesLoader+Send+Share>)
 		-> ManagedDisplay
 	{
 		ManagedDisplay {
@@ -43,8 +43,7 @@ impl ManagedDisplay {
 			_ => ()
 		};
 
-		let mut loaderLock = self.loader.lock();
-		let mut stream = match loaderLock.load(name) {
+		let mut stream = match self.loader.load(name) {
 			Ok(v) => v,
 			Err(e) => return Err(format!("{}", e))
 		};
