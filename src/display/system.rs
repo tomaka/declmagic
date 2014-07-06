@@ -41,17 +41,17 @@ impl DisplaySystem {
             .filter(|c| state.is_component_visible(*c).unwrap())
 			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "spriteDisplay", _ => false })
 			.map(|c| c.clone())
-			.collect::<HashSet<EntityID>>();
+			.collect::<HashSet<ComponentID>>();
 
 		// removing from the list the elements that have disappeared
-		{	let toRemove = self.sprites.keys().filter(|e| !listOfComponents.contains(e.clone())).map(|e| e.clone()).collect::<Vec<EntityID>>();
+		{	let toRemove = self.sprites.keys().filter(|e| !listOfComponents.contains(e.clone())).map(|e| e.clone()).collect::<Vec<ComponentID>>();
 			for c in toRemove.move_iter() {
 				self.sprites.remove(&c);
 			}
 		}
 
 		// adding elements that are not yet created
-		{	let toCreate = listOfComponents.iter().filter(|e| !self.sprites.contains_key(e.clone())).map(|e| e.clone()).collect::<Vec<EntityID>>();
+		{	let toCreate = listOfComponents.iter().filter(|e| !self.sprites.contains_key(e.clone())).map(|e| e.clone()).collect::<Vec<ComponentID>>();
 			for spriteDisplayComponent in toCreate.move_iter() {
 				// getting the name of the texture
 				let textureName = match state.get(&spriteDisplayComponent, "texture") { Ok(&::entities::String(ref s)) => s, _ => continue };
