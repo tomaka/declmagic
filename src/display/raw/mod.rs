@@ -548,6 +548,20 @@ impl PrimitiveType {
 	}
 }
 
+impl Texture {
+	pub fn get_width(&self) -> uint {
+		self.texture.width
+	}
+
+	pub fn get_height(&self) -> uint {
+		self.texture.height
+	}
+
+	pub fn get_depth(&self) -> uint {
+		self.texture.depth
+	}
+}
+
 impl Program {
 	pub fn build_uniforms(&self)
 		-> ProgramUniforms

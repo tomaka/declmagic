@@ -1,5 +1,6 @@
 use nalgebra::na::{ Eye, Mat4 };
 use std::sync::{ Arc, Mutex };
+use std::num;
 use super::managed_display::{ ManagedDisplay, Texture };
 use super::Drawable;
 
@@ -72,8 +73,62 @@ impl SpriteDisplayer {
 		})
 	}
 
-	pub fn set_rectangle_coords(&mut self, leftCoord: f32, topCoord: f32, rightCoord: f32, bottomCoord: f32) {
+	pub fn set_rectangle_coords(&mut self, leftCoord: Option<f32>, topCoord: Option<f32>, rightCoord: Option<f32>, bottomCoord: Option<f32>) {
 		self.insideMatrix = Eye::new_identity(4);
+
+		let heightToWidthRatio = (self.texture.get_height() as f32) / (self.texture.get_width() as f32);
+
+		let (leftCoord, topCoord, rightCoord, bottomCoord) =
+			match (leftCoord, topCoord, rightCoord, bottomCoord) {
+				(Some(l), Some(t), Some(r), Some(b))
+					=> (l, t, r, b),
+
+				(Some(l), None, Some(r), Some(b))
+					=> (l, b + heightToWidthRatio * num::abs(r - l), r, b),
+
+				(Some(l), Some(t), Some(r), None)
+					=> (l, t, r, t - heightToWidthRatio * num::abs(r - l)),
+
+				(None, Some(t), Some(r), Some(b))
+					=> (r - (t - b) / heightToWidthRatio, t, r, b),
+
+				(Some(l), Some(t), None, Some(b))
+					=> (l, t, l + (t - b) / heightToWidthRatio, b),
+
+				(None, None, Some(r), Some(b))
+					=> (-r, -b, r, b),
+
+				(None, Some(t), None, Some(b))
+					=> (-0.5 * num::abs(t - b) / heightToWidthRatio, t, 0.5 * num::abs(t - b) / heightToWidthRatio, b),
+
+				(None, Some(t), Some(r), None)
+					=> (-r, t, r, -t),
+
+				(Some(l), None, None, Some(b))
+					=> (l, -b, -l, b),
+
+				(Some(l), None, Some(r), None)
+					=> (l, 0.5 * num::abs(r - l) * heightToWidthRatio, r, -0.5 * num::abs(r - l) * heightToWidthRatio),
+
+				(Some(l), Some(t), None, None)
+					=> (l, t, -l, -t),
+
+				(Some(l), None, None, None)
+					=> (l, 0.5 * num::abs(l * 2.0) * heightToWidthRatio, -l, -0.5 * num::abs(l * 2.0) * heightToWidthRatio),
+
+				(None, None, Some(r), None)
+					=> (-r, 0.5 * num::abs(r * 2.0) * heightToWidthRatio, r, -0.5 * num::abs(r * 2.0) * heightToWidthRatio),
+
+				(None, Some(t), None, None)
+					=> (-0.5 * num::abs(t * 2.0) / heightToWidthRatio, t, 0.5 * num::abs(t * 2.0) / heightToWidthRatio, -t),
+
+				(None, None, None, Some(b))
+					=> (-0.5 * num::abs(b * 2.0) / heightToWidthRatio, -b, 0.5 * num::abs(b * 2.0) / heightToWidthRatio, b),
+
+				(None, None, None, None)
+					=> (-0.5, -0.5, 0.5, 0.5)
+			};
+
 		self.insideMatrix.m11 = (rightCoord - leftCoord) / 2.0;
 		self.insideMatrix.m41 = (rightCoord + leftCoord) / 2.0;
 		self.insideMatrix.m22 = (topCoord - bottomCoord) / 2.0;

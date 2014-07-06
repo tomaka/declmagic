@@ -66,10 +66,10 @@ impl DisplaySystem {
 
 				// getting coordinates
 				spriteDisplayer.set_rectangle_coords(
-					match state.get(&spriteDisplayComponent, "leftX") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => -0.5 },
-					match state.get(&spriteDisplayComponent, "topY") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 1.0 },
-					match state.get(&spriteDisplayComponent, "rightX") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 0.5 },
-					match state.get(&spriteDisplayComponent, "bottomY") { Ok(&::entities::Number(ref nb)) => *nb as f32, _ => 0.0 }
+					match state.get(&spriteDisplayComponent, "leftX") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
+					match state.get(&spriteDisplayComponent, "topY") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
+					match state.get(&spriteDisplayComponent, "rightX") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
+					match state.get(&spriteDisplayComponent, "bottomY") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None }
 				);
 
 				// inserting in sprites list
