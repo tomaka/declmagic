@@ -5,6 +5,7 @@ use std::rc::Rc;
 use threaded_executer::CommandsThread;
 use std::string::String;
 
+#[allow(dead_code)]
 mod libglfw3;
 mod window;
 

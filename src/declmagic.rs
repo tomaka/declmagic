@@ -15,7 +15,7 @@ extern crate serialize;
 extern crate stb_image;
 extern crate sync;
 
-use std::sync::{ Arc, Mutex };
+use std::sync::Arc;
 use display::Drawable;
 
 pub mod resources;

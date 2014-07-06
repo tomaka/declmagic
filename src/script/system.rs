@@ -9,7 +9,7 @@ impl ScriptSystem {
 		ScriptSystem
 	}
 
-	pub fn process(&mut self, state: &mut EntitiesState, elapsed: &u64)
+	pub fn process(&mut self, state: &mut EntitiesState, _: &u64)
 	{
 	}
 }

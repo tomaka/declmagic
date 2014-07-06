@@ -12,10 +12,10 @@ pub fn load(loader: &ResourcesLoader, resourceName: &str, output: &mut EntitiesS
 	-> Result<Vec<EntityID>, String>
 {
 	let mut docs = HashSet::new();
-	loadImpl(loader, resourceName, output, &mut docs)
+	load_impl(loader, resourceName, output, &mut docs)
 }
 
-fn loadImpl(loader: &ResourcesLoader, resourceName: &str, output: &mut EntitiesState, loadedDocs: &mut HashSet<String>)
+fn load_impl(loader: &ResourcesLoader, resourceName: &str, output: &mut EntitiesState, loadedDocs: &mut HashSet<String>)
 	-> Result<Vec<EntityID>, String>
 {
 	// checking that the doc has not already been loaded
@@ -37,10 +37,10 @@ fn loadImpl(loader: &ResourcesLoader, resourceName: &str, output: &mut EntitiesS
 	};
 
 	// loading the doc into the entities state
-	loadAll(output, &data, loader, loadedDocs)
+	load_all(output, &data, loader, loadedDocs)
 }
 
-fn loadAll(output: &mut EntitiesState, doc: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_all(output: &mut EntitiesState, doc: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<Vec<EntityID>, String>
 {
 	match doc {
@@ -48,7 +48,7 @@ fn loadAll(output: &mut EntitiesState, doc: &json::Json, loader: &ResourcesLoade
 			let mut result = Vec::new();
 
 			for elem in entities.iter() {
-				match loadEntity(output, elem, loader, loadedDocs) {
+				match load_entity(output, elem, loader, loadedDocs) {
 					Ok(e) => result.push(e),
 					Err(err) => {
 						for e in result.iter() { output.destroy_entity(e); }
@@ -63,7 +63,7 @@ fn loadAll(output: &mut EntitiesState, doc: &json::Json, loader: &ResourcesLoade
 	}
 }
 
-fn loadEntity(output: &mut EntitiesState, entity: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_entity(output: &mut EntitiesState, entity: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<EntityID, String>
 {
 	match entity {
@@ -74,7 +74,7 @@ fn loadEntity(output: &mut EntitiesState, entity: &json::Json, loader: &Resource
 
 			match entityData.find(&"components".to_string()) {
 				Some(cmp) => { 
-					match loadComponentsList(output, &entityID, cmp, loader, loadedDocs) {
+					match load_components_list(output, &entityID, cmp, loader, loadedDocs) {
 						Ok(_) => (),
 						Err(err) => {
 							output.destroy_entity(&entityID);
@@ -91,7 +91,7 @@ fn loadEntity(output: &mut EntitiesState, entity: &json::Json, loader: &Resource
 	}
 }
 
-fn loadComponentsList(output: &mut EntitiesState, entity: &EntityID, componentsList: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_components_list(output: &mut EntitiesState, entity: &EntityID, componentsList: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<Vec<ComponentID>, String>
 {
 	match componentsList {
@@ -99,7 +99,7 @@ fn loadComponentsList(output: &mut EntitiesState, entity: &EntityID, componentsL
 			let mut result = Vec::new();
 
 			for elem in components.iter() {
-				match loadComponent(output, entity, elem, loader, loadedDocs) {
+				match load_component(output, entity, elem, loader, loadedDocs) {
 					Ok(e) => result.push(e),
 					Err(err) => {
 						for e in result.iter() { output.destroy_component(e); }
@@ -114,7 +114,7 @@ fn loadComponentsList(output: &mut EntitiesState, entity: &EntityID, componentsL
 	}
 }
 
-fn loadComponent(output: &mut EntitiesState, entity: &EntityID, component: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_component(output: &mut EntitiesState, entity: &EntityID, component: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<ComponentID, String>
 {
 	match component {
@@ -125,14 +125,14 @@ fn loadComponent(output: &mut EntitiesState, entity: &EntityID, component: &json
 			};
 
 			let data = match componentInfos.find(&"data".to_string()) {
-				Some(cmp) => { try!(loadComponentData(output, cmp, loader, loadedDocs)) },
+				Some(cmp) => { try!(load_component_data(output, cmp, loader, loadedDocs)) },
 				_ => HashMap::new()
 			};
 
 			match cmptype {
 				&json::String(ref t) => output.create_native_component(entity, t.as_slice(), data),
 				&json::Object(_) => {
-					match loadComponentDataElement(output, cmptype, loader, loadedDocs) {
+					match load_data_entry(output, cmptype, loader, loadedDocs) {
 						Ok(super::Entity(id)) => output.create_component_from_entity(entity, &id, data),
 						Ok(_) => return Err(format!("Wrong type for component \"type\" field object, expected entity")),
 						Err(err) => return Err(err)
@@ -145,7 +145,7 @@ fn loadComponent(output: &mut EntitiesState, entity: &EntityID, component: &json
 	}
 }
 
-fn loadComponentData(output: &mut EntitiesState, componentData: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_component_data(output: &mut EntitiesState, componentData: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<HashMap<String, super::Data>, String>
 {
 	match componentData {
@@ -153,7 +153,7 @@ fn loadComponentData(output: &mut EntitiesState, componentData: &json::Json, loa
 			let mut result = HashMap::new();
 
 			for (key, val) in data.iter() {
-				result.insert(key.clone(), try!(loadComponentDataElement(output, val, loader, loadedDocs)));
+				result.insert(key.clone(), try!(load_data_entry(output, val, loader, loadedDocs)));
 			}
 
 			Ok(result)
@@ -162,7 +162,7 @@ fn loadComponentData(output: &mut EntitiesState, componentData: &json::Json, loa
 	}
 }
 
-fn loadComponentDataElement(output: &mut EntitiesState, element: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_data_entry(output: &mut EntitiesState, element: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<super::Data, String>
 {
 	Ok(match element {
@@ -178,7 +178,7 @@ fn loadComponentDataElement(output: &mut EntitiesState, element: &json::Json, lo
 		&json::List(ref elems) => {
 			let mut result = Vec::new();
 			for elem in elems.iter() {
-				let val = try!(loadComponentDataElement(output, elem, loader, loadedDocs));
+				let val = try!(load_data_entry(output, elem, loader, loadedDocs));
 				result.push(val);
 			}
 			super::List(result)
@@ -192,7 +192,7 @@ fn loadComponentDataElement(output: &mut EntitiesState, element: &json::Json, lo
 			if key.as_slice().eq_ignore_ascii_case("prototype") {
 				let entityID = output.create_entity(None, false);
 
-				match loadComponentsList(output, &entityID, val, loader, loadedDocs) {
+				match load_components_list(output, &entityID, val, loader, loadedDocs) {
 					Ok(_) => (),
 					Err(err) => {
 						output.destroy_entity(&entityID);
@@ -205,7 +205,7 @@ fn loadComponentDataElement(output: &mut EntitiesState, element: &json::Json, lo
 			} else if key.as_slice().eq_ignore_ascii_case("entity") {
 
 				let requestedName = match val.as_string() { Some(a) => a, None => return Err(format!("Component data element object of type Entity expects a string")) };
-				super::Entity(try!(loadEntityFromName(output, requestedName, loader, loadedDocs)))
+				super::Entity(try!(load_entity_from_name(output, requestedName, loader, loadedDocs)))
 				
 			} else {
 				return Err(format!("Got invalid key for component data element object: {}", key));
@@ -215,7 +215,7 @@ fn loadComponentDataElement(output: &mut EntitiesState, element: &json::Json, lo
 	})
 }
 
-fn loadEntityFromName(output: &mut EntitiesState, entityName: &str, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_entity_from_name(output: &mut EntitiesState, entityName: &str, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<EntityID, String>
 {
 	// first, we check if there is an existing entity with this name
@@ -238,7 +238,7 @@ fn loadEntityFromName(output: &mut EntitiesState, entityName: &str, loader: &Res
 	loop {
 		match nameAsPath.as_str() {
 			 Some(path) => 
-				match loadImpl(loader, path, output, loadedDocs) {
+				match load_impl(loader, path, output, loadedDocs) {
 					Ok(l) => { loadedEntitiesList = l; break },
 					Err(e) => ()		// TODO: check for error type! If anything else than "resource doesn't exist", return
 				},

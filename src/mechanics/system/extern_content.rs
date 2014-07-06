@@ -7,7 +7,7 @@ pub struct ExternContentSystem {
 }
 
 impl ExternContentSystem {
-	pub fn new<RL: ResourcesLoader + Send + Share>(state: &EntitiesState, loader: RL)
+	pub fn new<RL: ResourcesLoader + Send + Share>(_: &EntitiesState, loader: RL)
 		-> ExternContentSystem
 	{
 		ExternContentSystem {

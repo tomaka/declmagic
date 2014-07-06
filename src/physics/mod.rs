@@ -5,7 +5,7 @@ use std::rc::Rc;
 use nalgebra::na::{ Norm, Translation, Vec2 };
 use ncollide::geom::geom::Geom;
 use nphysics::world::World;
-use nphysics::object::{ RigidBody, RigidBodyState, Static, Dynamic };
+use nphysics::object::{ RigidBody };
 
 pub struct PhysicsSystem {
 	world: World,
@@ -13,7 +13,7 @@ pub struct PhysicsSystem {
 }
 
 impl PhysicsSystem {
-	pub fn new(state: &EntitiesState)
+	pub fn new(_: &EntitiesState)
 		-> PhysicsSystem
 	{
 		let mut world = World::new();

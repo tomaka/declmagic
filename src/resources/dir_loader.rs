@@ -1,7 +1,6 @@
 use std::io::{ IoResult, Reader };
 use std::io::fs::File;
 use std::path::Path;
-use super::libarchive;
 use super::ResourcesLoader;
 
 #[deriving(Clone)]

@@ -5,13 +5,13 @@ use script;
 pub struct InputSystem;
 
 impl InputSystem {
-    pub fn new(state: &EntitiesState)
+    pub fn new(_: &EntitiesState)
         -> InputSystem
     {
         InputSystem
     }
 
-    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &u64, messages: &[Message])
+    pub fn process(&mut self, state: &mut EntitiesState, _: &u64, messages: &[Message])
     {
         let mut filteredMessagesIter = messages.iter().filter_map(|msg| match msg {
                                                                             &Pressed(ref e) => Some((e.clone(), true)),

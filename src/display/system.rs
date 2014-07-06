@@ -12,7 +12,7 @@ pub struct DisplaySystem {
 }
 
 impl DisplaySystem {
-	pub fn new(display: Arc<ManagedDisplay>, state: &EntitiesState)
+	pub fn new(display: Arc<ManagedDisplay>, _: &EntitiesState)
 		-> DisplaySystem
 	{
 		DisplaySystem {
@@ -21,7 +21,7 @@ impl DisplaySystem {
 		}
 	}
 
-	pub fn draw(&mut self, state: &EntitiesState, elapsed: &u64)
+	pub fn draw(&mut self, state: &EntitiesState, _: &u64)
 	{
 		self.update_sprite_displayers(state);
 

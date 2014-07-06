@@ -274,7 +274,7 @@ impl EntitiesState {
 	pub fn get_owner(&self, id: &ComponentID)
 		-> Result<EntityID, String>
 	{
-		let mut component = match self.components.find(id) {
+		let component = match self.components.find(id) {
 			None => return Err(format!("Component with ID {} doesn't exist", id)),
 			Some(e) => e
 		};
@@ -285,7 +285,7 @@ impl EntitiesState {
 	pub fn get_type(&self, id: &ComponentID)
 		-> Result<ComponentType, String>
 	{
-		let mut component = match self.components.find(id) {
+		let component = match self.components.find(id) {
 			None => return Err(format!("Component with ID {} doesn't exist", id)),
 			Some(e) => e
 		};
@@ -308,7 +308,7 @@ impl EntitiesState {
 	pub fn get_entities_by_name<'a>(&'a self, name: &str)
 		-> Vec<EntityID>
 	{
-		self.entities.iter().filter(|&(ref id, ref e)| e.name == Some(name.to_string())).map(|(id,e)| id.clone()).collect()
+		self.entities.iter().filter(|&(_, ref e)| e.name == Some(name.to_string())).map(|(id, _)| id.clone()).collect()
 	}
 
 	pub fn get_components_iter<'a>(&'a self)
