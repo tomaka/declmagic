@@ -37,10 +37,10 @@ fn load_impl(loader: &ResourcesLoader, resourceName: &str, output: &mut Entities
 	};
 
 	// loading the doc into the entities state
-	load_all(output, &data, loader, loadedDocs)
+	load_all(output, resourceName, &data, loader, loadedDocs)
 }
 
-fn load_all(output: &mut EntitiesState, doc: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_all(output: &mut EntitiesState, resourceName: &str, doc: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<Vec<EntityID>, String>
 {
 	match doc {
@@ -48,7 +48,7 @@ fn load_all(output: &mut EntitiesState, doc: &json::Json, loader: &ResourcesLoad
 			let mut result = Vec::new();
 
 			for elem in entities.iter() {
-				match load_entity(output, elem, loader, loadedDocs) {
+				match load_entity(output, resourceName, elem, loader, loadedDocs) {
 					Ok(e) => result.push(e),
 					Err(err) => {
 						for e in result.iter() { output.destroy_entity(e); }
@@ -63,12 +63,17 @@ fn load_all(output: &mut EntitiesState, doc: &json::Json, loader: &ResourcesLoad
 	}
 }
 
-fn load_entity(output: &mut EntitiesState, entity: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+fn load_entity(output: &mut EntitiesState, resourceName: &str, entity: &json::Json, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<EntityID, String>
 {
 	match entity {
 		&json::Object(ref entityData) => {
-			let name = entityData.find(&"name".to_string()).and_then(|e| e.as_string()).map(|e| e.to_string());
+			let name = entityData
+				.find(&"name".to_string())
+				.and_then(|e| e.as_string())
+				.map(|e| e.to_string())
+				.map(|name| Path::new(resourceName).join(name).as_str().expect("non-utf8 entity name!").to_string());
+
 			let visible = entityData.find(&"visible".to_string()).and_then(|e| e.as_boolean()).unwrap_or(true);
 			let entityID = output.create_entity(name, visible);
 
@@ -218,6 +223,11 @@ fn load_data_entry(output: &mut EntitiesState, element: &json::Json, loader: &Re
 fn load_entity_from_name(output: &mut EntitiesState, entityName: &str, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
 	-> Result<EntityID, String>
 {
+	let entityNameRefined = {
+		let path = Path::new(entityName);
+		path.join(path.filename().unwrap()).as_str().expect("non-utf8 entity name!").to_string()
+	};
+
 	// first, we check if there is an existing entity with this name
 	{
 		let entities = output.get_entities_by_name(entityName);
@@ -229,43 +239,58 @@ fn load_entity_from_name(output: &mut EntitiesState, entityName: &str, loader: &
 		}
 	}
 
-
-	let entityName = ::std::path::posix::Path::new(entityName);
-
-	// trying to load the file with the same name as the entity
-	let mut nameAsPath = entityName.clone();
-	let mut loadedEntitiesList = Vec::new();
-	loop {
-		match nameAsPath.as_str() {
-			 Some(path) => 
-				match load_impl(loader, path, output, loadedDocs) {
-					Ok(l) => { loadedEntitiesList = l; break },
-					Err(e) => ()		// TODO: check for error type! If anything else than "resource doesn't exist", return
-				},
-			 None => ()
-		};
-
-		let newPath = nameAsPath.dir_path();
-		if match newPath.as_str() { Some(s) => s == ".", None => false } || newPath == nameAsPath { break };
-		nameAsPath = newPath;
-	}
-
-	// 
-	let entityToFind = entityName.path_relative_from(&nameAsPath).expect("internal error in entity path traversing");
-
-	if entityToFind.as_str() == Some(".") {
-		return Ok(match loadedEntitiesList.move_iter().next() {
-			Some(e) => e,
-			None => return Err(format!("Found resource named after entity \"{}\", but resource was empty", entityName.display()))
-		})
-
-	} else {
-		for entity in loadedEntitiesList.move_iter() {
-			if try!(output.get_entity_name(&entity)) == entityToFind.as_str().map(|s| s.to_string()) {
-				return Ok(entity)
-			}
+	// first, we check if there is an existing entity with this name
+	{
+		let entities = output.get_entities_by_name(entityNameRefined.as_slice());
+		if entities.len() >= 2 {
+			return Err(format!("Found multiple entities with the same name: {}", entityNameRefined))
+		}
+		if entities.len() == 1 {
+			return Ok(entities.get(0).clone())
 		}
 	}
 
-	Err(format!("Unable to load entity named \"{}\"", entityName.display()))
+
+	// trying to load the file with the same name as the entity
+	{
+		let mut nameAsPath = ::std::path::posix::Path::new(entityName);
+		loop {
+			match nameAsPath.as_str() {
+				 Some(path) => 
+					match load_impl(loader, path, output, loadedDocs) {
+						Ok(l) => break,
+						Err(e) => ()		// TODO: check for error type! If anything else than "resource doesn't exist", return
+					},
+				 None => ()
+			};
+
+			let newPath = nameAsPath.dir_path();
+			if match newPath.as_str() { Some(s) => s == ".", None => false } || newPath == nameAsPath { break };
+			nameAsPath = newPath;
+		}
+	}
+
+	// first, we check if there is an existing entity with this name
+	{
+		let entities = output.get_entities_by_name(entityName);
+		if entities.len() >= 2 {
+			return Err(format!("Found multiple entities with the same name: {}", entityName))
+		}
+		if entities.len() == 1 {
+			return Ok(entities.get(0).clone())
+		}
+	}
+
+	// first, we check if there is an existing entity with this name
+	{
+		let entities = output.get_entities_by_name(entityNameRefined.as_slice());
+		if entities.len() >= 2 {
+			return Err(format!("Found multiple entities with the same name: {}", entityNameRefined))
+		}
+		if entities.len() == 1 {
+			return Ok(entities.get(0).clone())
+		}
+	}
+
+	Err(format!("Unable to load entity named \"{}\"", entityName))
 }
