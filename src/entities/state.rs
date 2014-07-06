@@ -5,6 +5,13 @@ use std::collections::HashMap;
 pub type EntityID = uint;
 pub type ComponentID = uint;
 
+#[deriving(Show)]
+pub enum StateError {
+	EntityNotFound(EntityID),
+	ComponentNotFound(ComponentID),
+	FieldDoesNotExist(ComponentID, String)
+}
+
 pub struct EntitiesState {
 	components: std::collections::HashMap<ComponentID, Component>,
 	entities: std::collections::HashMap<EntityID, EntityData>,
@@ -92,16 +99,14 @@ impl EntitiesState {
 	}
 
 	pub fn destroy_entity(&mut self, id: &EntityID)
-		-> Result<(), String>
+		-> Result<(), StateError>
 	{
 		let componentsList = {
-			let entity = match self.entities.find(id) {
-				None => return Err(format!("Entity with ID {} is not valid", id)),
-				Some(e) => e
-			};
+			let entity = try!(self.get_entity_by_id(id));
 
 			if entity.componentsOfType.len() != 0 {
-				return Err(format!("Cannot destroy entity with ID {} (name: {}) because it has components of its type", id, entity.name));
+				unimplemented!()
+				//return Err(format!("Cannot destroy entity with ID {} (name: {}) because it has components of its type", id, entity.name));
 			}
 
 			entity.components.clone()
@@ -127,7 +132,7 @@ impl EntitiesState {
 	}
 
 	pub fn create_native_component(&mut self, owner: &EntityID, typename: &str, data: HashMap<String, Data>)
-		-> Result<ComponentID, String>
+		-> Result<ComponentID, StateError>
 	{
 		let newID = self.nextComponentID;
 
@@ -140,12 +145,8 @@ impl EntitiesState {
 			cmpType: NativeComponentType(typename.to_string())
 		};
 
-		let mut entity = match self.entities.find_mut(owner) {
-			None => return Err(format!("Entity with ID {} is not valid", owner)),
-			Some(e) => e
-		};
+		(try!(self.get_entity_by_id_mut(owner))).components.push(newID);
 
-		entity.components.push(newID);
 		self.components.insert(newID, newComponent);
 		self.nextComponentID = self.nextComponentID + 1;
 
@@ -156,7 +157,7 @@ impl EntitiesState {
 
 	// TODO: better error handling
 	pub fn create_component_from_entity(&mut self, owner: &EntityID, typename: &EntityID, data: HashMap<String, Data>)
-		-> Result<ComponentID, String>
+		-> Result<ComponentID, StateError>
 	{
 		let newID = self.nextComponentID;
 
@@ -193,7 +194,7 @@ impl EntitiesState {
 	}
 
 	pub fn destroy_component(&mut self, id: &ComponentID)
-		-> Result<(), String>
+		-> Result<(), StateError>
 	{
 		let children = (try!(self.get_component_by_id(id))).children.clone();
 		let linked = (try!(self.get_component_by_id(id))).linkedFrom.clone();
@@ -230,13 +231,13 @@ impl EntitiesState {
 	}
 
 	pub fn set(&mut self, id: &ComponentID, field: &str, data: Data)
-		-> Result<(), String>
+		-> Result<(), StateError>
 	{
 		let mut idIter = id.clone();
 
 		loop {
 			let mut component = match self.components.find_mut(&idIter) {
-				None => return Err(format!("Component with ID {} not found", idIter)),
+				None => return Err(ComponentNotFound(idIter)),
 				Some(c) => c
 			};
 
@@ -256,13 +257,13 @@ impl EntitiesState {
 	}
 
 	pub fn get<'a>(&'a self, id: &ComponentID, field: &str)
-		-> Result<&'a Data, String>
+		-> Result<&'a Data, StateError>
 	{
 		match (try!(self.get_component_by_id(id))).data {
 			ComponentDataNative(ref data) => {
 				match data.find_equiv(&field) {
 					Some(a) => Ok(a),
-					None => Err(format!("No field named {} in the component", field))
+					None => Err(FieldDoesNotExist(id.clone(), field.to_string()))
 				}
 			},
 			ComponentDataLink(c) => {
@@ -272,25 +273,15 @@ impl EntitiesState {
 	}
 
 	pub fn get_owner(&self, id: &ComponentID)
-		-> Result<EntityID, String>
+		-> Result<EntityID, StateError>
 	{
-		let component = match self.components.find(id) {
-			None => return Err(format!("Component with ID {} doesn't exist", id)),
-			Some(e) => e
-		};
-
-		Ok(component.owner)
+		Ok((try!(self.get_component_by_id(id))).owner)
 	}
 
 	pub fn get_type(&self, id: &ComponentID)
-		-> Result<ComponentType, String>
+		-> Result<ComponentType, StateError>
 	{
-		let component = match self.components.find(id) {
-			None => return Err(format!("Component with ID {} doesn't exist", id)),
-			Some(e) => e
-		};
-
-		Ok(component.cmpType.clone())
+		Ok((try!(self.get_component_by_id(id))).cmpType.clone())
 	}
 
 	pub fn get_entities_iter<'a>(&'a self)
@@ -300,7 +291,7 @@ impl EntitiesState {
 	}
 
 	pub fn get_entity_name<'a>(&'a self, id: &EntityID)
-		-> Result<Option<String>, String>
+		-> Result<Option<String>, StateError>
 	{
 		Ok((try!(self.get_entity_by_id(id))).name.clone())
 	}
@@ -341,7 +332,7 @@ impl EntitiesState {
 	}
 
 	pub fn set_component_parent(&mut self, component: &ComponentID, parent: &ComponentID)
-		-> Result<(), String>
+		-> Result<(), StateError>
 	{
 		if (try!(self.get_component_by_id_mut(component))).parent.is_some() {
 			self.clear_component_parent(component);
@@ -358,7 +349,7 @@ impl EntitiesState {
 	}
 
 	pub fn get_component_children(&self, component: &ComponentID)
-		-> Result<Vec<ComponentID>, String>
+		-> Result<Vec<ComponentID>, StateError>
 	{
 		Ok((try!(self.get_component_by_id(component))).children.clone())
 	}
@@ -368,7 +359,7 @@ impl EntitiesState {
 	 */
 	// TODO: better error handling
 	fn create_inherited_component(&mut self, owner: &EntityID, parent: &ComponentID, inherit: &ComponentID)
-		-> Result<ComponentID, String>
+		-> Result<ComponentID, StateError>
 	{
 		let newID = self.nextComponentID;
 
@@ -393,43 +384,43 @@ impl EntitiesState {
 	}
 
 	fn get_entity_by_id<'a>(&'a self, id: &ComponentID)
-		-> Result<&'a EntityData, String>
+		-> Result<&'a EntityData, StateError>
 	{
 		match self.entities.find(id) {
-			None => Err(format!("Entity with ID {} not found", id)),
+			None => Err(EntityNotFound(id.clone())),
 			Some(c) => Ok(c)
 		}
 	}
 
 	fn get_entity_by_id_mut<'a>(&'a mut self, id: &ComponentID)
-		-> Result<&'a mut EntityData, String>
+		-> Result<&'a mut EntityData, StateError>
 	{
 		match self.entities.find_mut(id) {
-			None => Err(format!("Entity with ID {} not found", id)),
+			None => Err(EntityNotFound(id.clone())),
 			Some(c) => Ok(c)
 		}
 	}
 
 	fn get_component_by_id<'a>(&'a self, id: &ComponentID)
-		-> Result<&'a Component, String>
+		-> Result<&'a Component, StateError>
 	{
 		match self.components.find(id) {
-			None => Err(format!("Component with ID {} not found", id)),
+			None => Err(ComponentNotFound(id.clone())),
 			Some(c) => Ok(c)
 		}
 	}
 
 	fn get_component_by_id_mut<'a>(&'a mut self, id: &ComponentID)
-		-> Result<&'a mut Component, String>
+		-> Result<&'a mut Component, StateError>
 	{
 		match self.components.find_mut(id) {
-			None => Err(format!("Component with ID {} not found", id)),
+			None => Err(ComponentNotFound(id.clone())),
 			Some(c) => Ok(c)
 		}
 	}
 
 	pub fn is_component_visible(&self, id: &ComponentID)
-		-> Result<bool, String>
+		-> Result<bool, StateError>
 	{
 		let owner = try!(self.get_owner(id));
 		Ok((try!(self.get_entity_by_id(&owner))).visible)

@@ -135,10 +135,10 @@ fn load_component(output: &mut EntitiesState, entity: &EntityID, component: &jso
 			};
 
 			match cmptype {
-				&json::String(ref t) => output.create_native_component(entity, t.as_slice(), data),
+				&json::String(ref t) => output.create_native_component(entity, t.as_slice(), data).map_err(|err| format!("{}", err)),
 				&json::Object(_) => {
 					match load_data_entry(output, cmptype, loader, loadedDocs) {
-						Ok(super::Entity(id)) => output.create_component_from_entity(entity, &id, data),
+						Ok(super::Entity(id)) => output.create_component_from_entity(entity, &id, data).map_err(|err| format!("{}", err)),
 						Ok(_) => return Err(format!("Wrong type for component \"type\" field object, expected entity")),
 						Err(err) => return Err(err)
 					}
