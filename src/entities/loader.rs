@@ -69,7 +69,7 @@ fn loadEntity(output: &mut EntitiesState, entity: &json::Json, loader: &Resource
 	match entity {
 		&json::Object(ref entityData) => {
 			let name = entityData.find(&"name".to_string()).and_then(|e| e.as_string()).map(|e| e.to_string());
-			let visible = entityData.find(&"visible".to_string()).and_then(|e| e.as_string()).map(|e| e == "true").unwrap_or(true);
+			let visible = entityData.find(&"visible".to_string()).and_then(|e| e.as_boolean()).unwrap_or(true);
 			let entityID = output.create_entity(name, visible);
 
 			match entityData.find(&"components".to_string()) {
@@ -119,7 +119,7 @@ fn loadComponent(output: &mut EntitiesState, entity: &EntityID, component: &json
 {
 	match component {
 		&json::Object(ref componentInfos) => {
-			let cmptype = match componentInfos.find(&"type".to_string()).and_then(|e| e.as_string()) {
+			let cmptype = match componentInfos.find(&"type".to_string()) {
 				Some(t) => t,
 				None => return Err(format!("Component does not have a \"type\" field: {}", component))
 			};
@@ -129,7 +129,17 @@ fn loadComponent(output: &mut EntitiesState, entity: &EntityID, component: &json
 				_ => HashMap::new()
 			};
 
-			output.create_native_component(entity, cmptype, data)
+			match cmptype {
+				&json::String(ref t) => output.create_native_component(entity, t.as_slice(), data),
+				&json::Object(_) => {
+					match loadComponentDataElement(output, cmptype, loader, loadedDocs) {
+						Ok(super::Entity(id)) => output.create_component_from_entity(entity, &id, data),
+						Ok(_) => return Err(format!("Wrong type for component \"type\" field object, expected entity")),
+						Err(err) => return Err(err)
+					}
+				},
+				_ => Err(format!("Wrong format for component \"type\" field, expected string or object"))
+			}
 		},
 		_ => return Err(format!("Wrong format for component, expected object but got {}", component))
 	}
@@ -192,10 +202,70 @@ fn loadComponentDataElement(output: &mut EntitiesState, element: &json::Json, lo
 
 				super::Entity(entityID)
 
+			} else if key.as_slice().eq_ignore_ascii_case("entity") {
+
+				let requestedName = match val.as_string() { Some(a) => a, None => return Err(format!("Component data element object of type Entity expects a string")) };
+				super::Entity(try!(loadEntityFromName(output, requestedName, loader, loadedDocs)))
+				
 			} else {
 				return Err(format!("Got invalid key for component data element object: {}", key));
 			}
 		},
 		_ => return Err(format!("Wrong format for component data element, got {}", element))
 	})
+}
+
+fn loadEntityFromName(output: &mut EntitiesState, entityName: &str, loader: &ResourcesLoader, loadedDocs: &mut HashSet<String>)
+	-> Result<EntityID, String>
+{
+	// first, we check if there is an existing entity with this name
+	{
+		let entities = output.get_entities_by_name(entityName);
+		if entities.len() >= 2 {
+			return Err(format!("Found multiple entities with the same name: {}", entityName))
+		}
+		if entities.len() == 1 {
+			return Ok(entities.get(0).clone())
+		}
+	}
+
+
+	let entityName = ::std::path::posix::Path::new(entityName);
+
+	// trying to load the file with the same name as the entity
+	let mut nameAsPath = entityName.clone();
+	let mut loadedEntitiesList = Vec::new();
+	loop {
+		match nameAsPath.as_str() {
+			 Some(path) => 
+				match loadImpl(loader, path, output, loadedDocs) {
+					Ok(l) => { loadedEntitiesList = l; break },
+					Err(e) => ()		// TODO: check for error type! If anything else than "resource doesn't exist", return
+				},
+			 None => ()
+		};
+
+		let newPath = nameAsPath.dir_path();
+		if match newPath.as_str() { Some(s) => s == ".", None => false } || newPath == nameAsPath { break };
+		nameAsPath = newPath;
+	}
+
+	// 
+	let entityToFind = entityName.path_relative_from(&nameAsPath).expect("internal error in entity path traversing");
+
+	if entityToFind.as_str() == Some(".") {
+		return Ok(match loadedEntitiesList.move_iter().next() {
+			Some(e) => e,
+			None => return Err(format!("Found resource named after entity \"{}\", but resource was empty", entityName.display()))
+		})
+
+	} else {
+		for entity in loadedEntitiesList.move_iter() {
+			if try!(output.get_entity_name(&entity)) == entityToFind.as_str().map(|s| s.to_string()) {
+				return Ok(entity)
+			}
+		}
+	}
+
+	Err(format!("Unable to load entity named \"{}\"", entityName.display()))
 }

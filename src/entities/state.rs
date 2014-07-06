@@ -299,6 +299,18 @@ impl EntitiesState {
 		self.entities.keys()
 	}
 
+	pub fn get_entity_name<'a>(&'a self, id: &EntityID)
+		-> Result<Option<String>, String>
+	{
+		Ok((try!(self.get_entity_by_id(id))).name.clone())
+	}
+
+	pub fn get_entities_by_name<'a>(&'a self, name: &str)
+		-> Vec<EntityID>
+	{
+		self.entities.iter().filter(|&(ref id, ref e)| e.name == Some(name.to_string())).map(|(id,e)| id.clone()).collect()
+	}
+
 	pub fn get_components_iter<'a>(&'a self)
 		-> std::collections::hashmap::Keys<'a, ComponentID, Component>
 	{
