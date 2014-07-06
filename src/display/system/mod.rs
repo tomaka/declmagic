@@ -6,17 +6,21 @@ use std::sync::Arc;
 use super::sprite_displayer::SpriteDisplayer;
 use super::Drawable;
 
+mod custom_display_system;
+
 pub struct DisplaySystem {
 	display: Arc<ManagedDisplay>,
+	customDisplay: custom_display_system::CustomDisplaySystem,
 	sprites: HashMap<ComponentID, SpriteDisplayer>
 }
 
 impl DisplaySystem {
-	pub fn new(display: Arc<ManagedDisplay>, _: &EntitiesState)
+	pub fn new(display: Arc<ManagedDisplay>, state: &EntitiesState)
 		-> DisplaySystem
 	{
 		DisplaySystem {
 			display: display.clone(),
+			customDisplay: custom_display_system::CustomDisplaySystem::new(display.clone(), state),
 			sprites: HashMap::new()
 		}
 	}
@@ -32,6 +36,8 @@ impl DisplaySystem {
 	 		let translationMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, pos.x, pos.y, pos.z, 1.0);
 			sprite.draw(&(translationMatrix * camera));
 		}
+
+		self.customDisplay.draw(state);
 	}
 
 	fn update_sprite_displayers(&mut self, state: &EntitiesState)
