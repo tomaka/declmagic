@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+
+<body>
+
+<h2>Native components</h2>
+
+
+<h3>Common</h3>
+
+<h4>position</h4>
+
+<p>Determines the position of the entity.</p>
+
+<p>If there are multiple `position` components, the position of the entity is the sum of all the components.</p>
+
+<p>The values in this component are updated when the game runs.</p>
+
+<p><pre><code>
+{
+	"type": "position",
+	"data": {
+		"x": &lt;number (optional)&gt;,
+		"y": &lt;number (optional)&gt;,
+		"z": &lt;number (optional)&gt;
+	}
+}
+</code></pre></p>
+
+
+<h3>Display</h3>
+
+<h4>spriteDisplay</h4>
+
+<p>Displays a 2D sprite at the entity's position.</p>
+
+<p><pre><code>
+{
+	"type": "spriteDisplay",
+	"data": {
+		"texture": &lt;string&gt;,
+		"topY": &lt;number (optional)&gt;,
+		"leftX": &lt;number (optional)&gt;,
+		"bottomY": &lt;number (optional)&gt;,
+		"rightX": &lt;number (optional)&gt;
+	}
+}
+</code></pre></p>
+
+<ul>
+<li><code>texture</code>: name of the resource to display</li>
+<li><code>topY</code>: y coordinate of the top of the sprite, relative to the entity's position</li>
+<li><code>leftX</code>: x coordinate of the left of the sprite, relative to the entity's position</li>
+<li><code>bottomY</code>: y coordinate of the bottom of the sprite, relative to the entity's position</li>
+<li><code>rightX</code>: x coordinate of the right of the sprite, relative to the entity's position</li>
+</ul>
+
+<p>If some of the coordinates are not specified, they will be automatically determined depending on the others.</p>
+
+
+<h3>Input</h3>
+
+<h4>inputHandler</h4>
+
+<p>Allows handling of a user input.</p>
+
+<p><pre><code>
+{
+	"type": "inputHandler",
+	"data": {
+		"element": &lt;string&gt;,
+		"script": &lt;string (optional)&gt;,
+		"prototypeWhilePressed": &lt;entity (optional)&gt;
+	}
+}
+</code></pre></p>
+
+<ul>
+<li><code>element</code>: name of the element that is to be handled (eg. "A", "B", "Button0", etc.)</li>
+<li><code>script</code>: script to execute every time the element is pressed, released or moved</li>
+<li><code>prototypeWhilePressed</code>: entity to inherit from when the element is down</li>
+</ul>
+
+<h3>Physics</h3>
+
+<h4>movement</h4>
+
+<p>Determines the requested movement of the entity.</p>
+
+<p>If there are multiple `movement` components, the movement of the entity is the sum of all the components.</p>
+
+<p><pre><code>
+{
+	"type": "movement",
+	"data": {
+		"x": &lt;number (optional)&gt;,
+		"y": &lt;number (optional)&gt;,
+		"z": &lt;number (optional)&gt;
+	}
+}
+</code></pre></p>
+
+
+<h4>physics</h4>
+
+<p>WIP</p>
+
+<p><pre><code>
+{
+	"type": "physics",
+	"data": {
+		"activated": &lt;boolean (default: false)&gt;
+	}
+}
+</code></pre></p>
+
+
+<h3>Mechanics</h3>
+
+<h4>executeNow</h4>
+
+<p><strong>(not implemented)</strong></p>
+
+<p>When this component is created, its script will be executed as soon as possible and the component is destroyed.</p>
+
+<p><pre><code>
+{
+	"type": "executeNow",
+	"data": {
+		"script": &lt;string&gt;
+	}
+}
+</code></pre></p>
+
+<h4>externContent</h4>
+
+<p><strong>(not implemented)</strong></p>
+
+<p>As long as this component is alive, the entities defined in the given resource are loaded into the game.</p>
+
+<p>If the content of `resource` is changed, the entities are unloaded.</p>
+
+<p><pre><code>
+{
+	"type": "externContent",
+	"data": {
+		"resource": &lt;string (optional)&gt;
+	}
+}
+</code></pre></p>
+
+<h4>property</h4>
+
+<p>Defines a custom property</p>
+
+<p><pre><code>
+{
+	"type": "property",
+	"data": {
+		"property": &lt;string&gt;,
+		"value": &lt;anything&gt;
+	}
+}
+</code></pre></p>
+
+<h4>propertyRange</h4>
+
+<p>Script to execute when the value of a property is in a certain range.</p>
+
+<p><pre><code>
+{
+	"type": "propertyRange",
+	"data": {
+		"property": &lt;string&gt;,
+		"minValue": &lt;number (optional)&gt;,
+		"maxValue": &lt;number (optional)&gt;,
+		"scriptOnEnter": &lt;string (optional)&gt;,
+		"scriptOnLeave": &lt;string (optional)&gt;,
+		"prototypeInRange": &lt;entity (optional)&gt;
+	}
+}
+</code></pre></p>
+
+</body>
+</html>
