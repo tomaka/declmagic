@@ -18,7 +18,7 @@ impl ResourcesLoader for DirLoader {
 	fn load(&self, resourceName: &str)
 		-> IoResult<Box<Reader>>
 	{
-		let pathToSearch = self.directory.join(resourceName).join(".*");
+		let pathToSearch = self.directory.join(format!("{}.*", resourceName));
 
 		match ::glob::glob(format!("{}", pathToSearch.display()).as_slice()).next()
 		{
@@ -26,7 +26,7 @@ impl ResourcesLoader for DirLoader {
 				Err(::std::io::IoError{
 					kind: ::std::io::FileNotFound,
 					desc: "Could not find resource",
-					detail: None
+					detail: Some(format!("Could not find resource \"{}\"", resourceName))
 				}),
 				
 			Some(file) =>
