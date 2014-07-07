@@ -32,6 +32,32 @@
 
 <h3>Display</h3>
 
+<h4>camera</h4>
+
+<p>Specifies a camera to be used.</p>
+
+<p><pre><code>
+{
+	"type": "camera",
+	"data": {
+		"matrix": [ <m11>, <m12>, <m13>, <m14>, <m21>, <m22>, <m23>, <m24>, <m31>, <m32>, <m33>, <m34>, <m41>, <m42>, <m43>, <m44> ],
+		"priority": &lt;number (optional, default 1)&gt;
+	}
+}
+</code></pre></p>
+
+<ul>
+<li><code>matrix</code>: the matrix to apply to the whole scene when rendered with this camera</li>
+<li><code>priority</code>: if there are multiple camera components accross the whole state, the one with the highest priority wins</li>
+</ul>
+
+<p>The <code>position</code> of the camera entity is also taken into account.
+If you move the camera entity, all the elements on the scene will move.</p>
+
+<p>When a scene is being rendered, the <code>camera</code> component with the highest priority is chosen.
+Its position is then applied to all the elements, and then its matrix is applied</p>
+
+
 <h4>spriteDisplay</h4>
 
 <p>Displays a 2D sprite at the entity's position.</p>

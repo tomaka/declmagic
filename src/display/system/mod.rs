@@ -82,29 +82,25 @@ impl DisplaySystem {
 	fn get_camera(state: &EntitiesState)
 		-> Mat4<f32>
 	{
-		state
+		let cameraInfos = state
 			.get_components_iter()
-
-			// filter out non-visible components
 			.filter(|c| state.is_component_visible(*c).unwrap())
-
-			// take only the "camera" components
 			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "camera", _ => false })
+			.max_by(|c| match state.get(*c, "priority") { Ok(&::entities::Number(ref n)) => (((*n) * 1000f64) as int), _ => 1000 })
+			.and_then(|c| match state.get(c, "matrix") { Ok(&::entities::List(ref data)) => Some((c, data)), _ => None })
+			.map(|(c, data)| (c, data.iter().filter_map(|elem| match elem { &::entities::Number(ref n) => Some(n.clone() as f32), _ => None }).collect::<Vec<f32>>()) );
 
-			// get the component with the highest priority
-			.max_by(|c| match state.get(*c, "priority") { Ok(&::entities::Number(ref n)) => (((*n) * 1000f64) as int), _ => -99999999 })
+		if cameraInfos.is_none() {
+			return Eye::new_identity(4);
+		}
 
-			// get the matrix of this component and check its type
-			.and_then(|e| match state.get(e, "matrix") { Ok(&::entities::List(ref data)) => Some(data), _ => None })
+		let (cameraComponent, matrixData) = cameraInfos.unwrap();
+		let matrix = Mat4::new(*matrixData.get(0), *matrixData.get(1), *matrixData.get(2), *matrixData.get(3), *matrixData.get(4), *matrixData.get(5), *matrixData.get(6), *matrixData.get(7), *matrixData.get(8), *matrixData.get(9), *matrixData.get(10), *matrixData.get(11), *matrixData.get(12), *matrixData.get(13), *matrixData.get(14), *matrixData.get(15));
 
-			// check the type of each element in the matrix and creates an array
-			.map(|data| data.iter().filter_map(|elem| match elem { &::entities::Number(ref n) => Some(n.clone() as f32), _ => None }).collect() )
+		let position = DisplaySystem::get_position(state, &state.get_owner(cameraComponent).unwrap());
+		let positionMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -position.x, -position.y, -position.z, 1.0);
 
-			// turn into matrix
-			.map(|array: Vec<f32>| Mat4::new(*array.get(0), *array.get(1), *array.get(2), *array.get(3), *array.get(4), *array.get(5), *array.get(6), *array.get(7), *array.get(8), *array.get(9), *array.get(10), *array.get(11), *array.get(12), *array.get(13), *array.get(14), *array.get(15)))
-
-			// return identity if the option is empty
-			.unwrap_or_else(|| Eye::new_identity(4))
+		positionMatrix * matrix
 	}
 
 	/// returns the position of an entity
