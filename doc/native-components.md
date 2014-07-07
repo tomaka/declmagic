@@ -200,7 +200,7 @@ This is useful to load levels or menus.
 
 ### property
 
-Defines a custom property
+Defines a custom property.
 
 ```rust
 {
@@ -216,6 +216,29 @@ Defines a custom property
  - `name`: name of the property
  - `value`: value of the property
  - `priority`: if multiple properties of the same name exist on the same entity, the one with the highest priority will take precedence
+
+### propertyView
+
+**(not implemented)**
+
+Defines a custom property whose value is an alias of something else.
+
+```rust
+{
+	"type": "propertyView",
+	"data": {
+		"property": <string>,
+		"value": <string>,
+		"priority": <number (optional, default 1)>
+	}
+}
+```
+
+ - `name`: name of the property
+ - `value`: Lua script that gets executed each time the value of this property needs to be obtained, **the script must return a value by calling `return` manually**
+ - `priority`: if multiple properties of the same name exist on the same entity, the one with the highest priority will take precedence
+
+For example, you can define a property view named `dead` whose value is `return This.properties["health"] <= 0`
 
 ### propertyRange
 
