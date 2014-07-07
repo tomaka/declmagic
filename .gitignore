@@ -1,0 +1,5 @@
+*.a
+*.dll
+*.exe
+*.rlib
+*.fingerprint
