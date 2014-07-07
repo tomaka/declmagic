@@ -164,10 +164,18 @@ If the content of `resource` is changed, the entities are unloaded.
 {
 	"type": "externContent",
 	"data": {
-		"resource": <string (optional)>
+		"resource": <string (optional)>,
+		"whileLoading": <entity (optional)>,
+		"destroyAfterLoading": <boolean (optional, default false)>
 	}
 }
 ```
+
+ - `resource`: resources to load
+ - `whileLoading`: entity that should become visible while the resource is loading
+ - `destroyAfterLoading`: if true, the loaded entities will be merged into the state and this component will be destroyed
+
+This is useful to load levels or menus.
 
 ### property
 
@@ -184,6 +192,8 @@ Defines a custom property
 ```
 
 ### propertyRange
+
+**(not implemented)**
 
 Script to execute when the value of a property is in a certain range.
 
