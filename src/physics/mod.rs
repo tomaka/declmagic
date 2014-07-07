@@ -17,7 +17,7 @@ impl PhysicsSystem {
 		-> PhysicsSystem
 	{
 		let mut world = World::new();
-		world.set_gravity(Vec2::new(0.0f32, 0.0));
+		world.set_gravity(Vec2::new(0.0f32, -9.8));
 
 		let shape = ::ncollide::geom::Plane::new(Vec2::new(0.0f32, 1.0));
 		let body = Rc::new(RefCell::new(RigidBody::new_static(shape, 0.3, 0.6)));
@@ -68,11 +68,13 @@ impl PhysicsSystem {
 		for (entity, body) in self.bodies.iter() {
 			let position = PhysicsSystem::get_position(state, entity);
 			let movement = PhysicsSystem::get_movement(state, entity);
-			let requestedMovement = PhysicsSystem::get_movement(state, entity);
+			let requestedMovement = PhysicsSystem::get_requested_movement(state, entity);
+			let acceleration = Norm::normalize_cpy(&(requestedMovement - movement)) * 5.0f32;
 
 			let mut borrowedBody = body.borrow_mut();
 			borrowedBody.set_translation(position);
 			borrowedBody.set_lin_vel(movement);
+			borrowedBody.set_lin_acc(acceleration);
 		}
 
 		// step
@@ -121,6 +123,30 @@ impl PhysicsSystem {
 
 			// take only the "position" components
 			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "movement", _ => false })
+
+			// build a vector from each of the component
+			.filter_map(|cmp| match (state.get(cmp, "x"), state.get(cmp, "y"), state.get(cmp, "z")) {
+				(Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
+					=> Some(Vec2::new(*x as f32, *y as f32)),
+				_ => None
+			})
+
+			// add all the elements together
+			.fold(Vec2::new(0.0, 0.0), |vec, a| Vec2::new(vec.x + a.x, vec.y + a.y))
+	}
+
+	/// returns the total requested movement of an entity
+	fn get_requested_movement(state: &EntitiesState, id: &EntityID)
+		-> Vec2<f32>
+	{
+		state
+			.get_components_iter()
+
+			// take only the components owned by the entity
+			.filter(|c| state.get_owner(*c).unwrap() == *id)
+
+			// take only the "position" components
+			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "requestedMovement", _ => false })
 
 			// build a vector from each of the component
 			.filter_map(|cmp| match (state.get(cmp, "x"), state.get(cmp, "y"), state.get(cmp, "z")) {
