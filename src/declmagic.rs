@@ -19,53 +19,102 @@ use std::sync::Arc;
 use display::Drawable;
 
 pub mod resources;
+pub mod entities;
 
 mod config;
 mod display;
-mod entities;
 mod input;
 mod mechanics;
 mod physics;
 mod script;
 mod threaded_executer;
 
-pub fn exec_game<RL: resources::ResourcesLoader+Send+Share>(resources: RL) {
-	let display = Arc::new(display::managed_display::ManagedDisplay::new(display::raw::Display::new(1024, 768, "Game"), box resources.clone() as Box<resources::ResourcesLoader+Send+Share>));
+pub trait GameSystem {
+	fn process(&mut self, state: &mut entities::EntitiesState, elapsed: &u64);
+}
 
-	let mut timer = ::std::io::timer::Timer::new().unwrap();
-	let period = 1000 / 60;
-	let timerPeriod = timer.periodic(period);
+pub struct Game {
+	display: Arc<display::managed_display::ManagedDisplay>,
 
-	let mut state = entities::EntitiesState::new();
+	state: entities::EntitiesState,
+	loader: Box<resources::ResourcesLoader + Send + Share>,
 
-	entities::loader::load(&resources, "main", &mut state).unwrap();
+	displaySystem: display::DisplaySystem,
+	inputSystem: input::InputSystem,
+	physicsSystem: physics::PhysicsSystem,
+	mechanicsSystem: mechanics::MechanicsSystem,
 
-	let mut displaySystem = display::DisplaySystem::new(display.clone(), &state);
-	let mut inputSystem = input::InputSystem::new(&state);
-	let mut physicsSystem = physics::PhysicsSystem::new(&state);
-	let mut mechanicsSystem = mechanics::MechanicsSystem::new(&state, resources.clone());
-	let mut scriptSystem = script::ScriptSystem::new(&state);
+	thirdPartySystems: Vec<Box<GameSystem>>
+}
 
-	'mainLoop: loop {
-		let mut inputMessages = Vec::new();
+impl Game {
+	pub fn new<RL: resources::ResourcesLoader+Send+Share>(resources: RL)
+		-> Game
+	{
+		let display = Arc::new(display::managed_display::ManagedDisplay::new(display::raw::Display::new(1024, 768, "Game"), box resources.clone() as Box<resources::ResourcesLoader+Send+Share>));
 
-		loop {
-			match display.recv() {
-				Some(display::raw::Closed) => break 'mainLoop,
-				Some(display::raw::Input(msg)) => inputMessages.push(msg),
-				Some(_) => continue,
-				None => break
-			};
+		let mut state = entities::EntitiesState::new();
+		entities::loader::load(&resources, "main", &mut state).unwrap();
+
+		let displaySystem = display::DisplaySystem::new(display.clone(), &state);
+		let inputSystem = input::InputSystem::new(&state);
+		let physicsSystem = physics::PhysicsSystem::new(&state);
+		let mechanicsSystem = mechanics::MechanicsSystem::new(&state, resources.clone());
+		let scriptSystem = script::ScriptSystem::new(&state);
+
+		Game {
+			display: display.clone(),
+
+			state: state,
+			loader: box resources as Box<resources::ResourcesLoader + Send + Share>,
+
+			displaySystem: displaySystem,
+			inputSystem: inputSystem,
+			physicsSystem: physicsSystem,
+			mechanicsSystem: mechanicsSystem,
+
+			thirdPartySystems: Vec::new()
 		}
-
-		inputSystem.process(&mut state, &period, inputMessages.as_slice());
-		physicsSystem.process(&mut state, &period);
-		mechanicsSystem.process(&mut state, &period);
-		scriptSystem.process(&mut state, &period);
-		displaySystem.draw(&state, &period);
-
-		display.swap_buffers();
-		timerPeriod.recv();
 	}
 
+	pub fn add_system<S: GameSystem + 'static>(&mut self, system: S)
+	{
+		self.thirdPartySystems.push(box system as Box<GameSystem>)
+	}
+
+	pub fn exec(mut self) {
+		let mut timer = ::std::io::timer::Timer::new().unwrap();
+		let period = 1000 / 60;
+		let timerPeriod = timer.periodic(period);
+
+		'mainLoop: loop {
+			let mut inputMessages = Vec::new();
+
+			loop {
+				match self.display.recv() {
+					Some(display::raw::Closed) => break 'mainLoop,
+					Some(display::raw::Input(msg)) => inputMessages.push(msg),
+					Some(_) => continue,
+					None => break
+				};
+			}
+
+			self.inputSystem.process(&mut self.state, &period, inputMessages.as_slice());
+			self.physicsSystem.process(&mut self.state, &period);
+			self.mechanicsSystem.process(&mut self.state, &period);
+			self.displaySystem.draw(&mut self.state, &period);
+
+			for system in self.thirdPartySystems.mut_iter() {
+				system.process(&mut self.state, &period)
+			}
+
+			self.display.swap_buffers();
+			timerPeriod.recv();
+		}
+	}
+}
+
+pub fn exec_game<RL: resources::ResourcesLoader+Send+Share>(resources: RL) {
+	let game = Game::new(resources);
+	game.exec();
 }
