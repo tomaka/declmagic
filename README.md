@@ -4,6 +4,8 @@
 
 Game engine written in Rust with declarative programming mind
 
+[How to use it?](doc/introduction.md)
+
 
 ### How to install it?
 
