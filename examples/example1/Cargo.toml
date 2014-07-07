@@ -1,0 +1,10 @@
+[project]
+
+name = "declmagic-example1"
+version = "0.0.1"
+authors = ["Pierre Krieger <pierre.krieger1708@gmail.com>"]
+tags = []
+build = "cp -R ../../target/* target/"
+
+[[bin]]
+name = "example1"
