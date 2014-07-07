@@ -1,10 +1,6 @@
 use entities::{ EntitiesState, EntityID, ComponentID };
 use rust_hl_lua::{ Lua, LuaError };
 
-pub use self::system::ScriptSystem;
-
-mod system;
-
 pub fn execute<S: ::std::str::Str + ::std::fmt::Show>(entities: &mut EntitiesState, component: &ComponentID, code: &S)
 	-> Result<(), LuaError>
 {

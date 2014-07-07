@@ -60,7 +60,6 @@ impl Game {
 		let inputSystem = input::InputSystem::new(&state);
 		let physicsSystem = physics::PhysicsSystem::new(&state);
 		let mechanicsSystem = mechanics::MechanicsSystem::new(&state, resources.clone());
-		let scriptSystem = script::ScriptSystem::new(&state);
 
 		Game {
 			display: display.clone(),
