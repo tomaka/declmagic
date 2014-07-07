@@ -17,7 +17,7 @@ impl PhysicsSystem {
 		-> PhysicsSystem
 	{
 		let mut world = World::new();
-		world.set_gravity(Vec2::new(0.0f32, -9.81));
+		world.set_gravity(Vec2::new(0.0f32, 0.0));
 
 		let shape = ::ncollide::geom::Plane::new(Vec2::new(0.0f32, 1.0));
 		let body = Rc::new(RefCell::new(RigidBody::new_static(shape, 0.3, 0.6)));
@@ -66,14 +66,13 @@ impl PhysicsSystem {
 
 		// setting all positions and movements
 		for (entity, body) in self.bodies.iter() {
-			let pos = PhysicsSystem::get_position(state, entity);
+			let position = PhysicsSystem::get_position(state, entity);
+			let movement = PhysicsSystem::get_movement(state, entity);
 			let requestedMovement = PhysicsSystem::get_movement(state, entity);
 
 			let mut borrowedBody = body.borrow_mut();
-			borrowedBody.set_translation(pos);
-
-			let currentMovement = borrowedBody.lin_vel();
-			borrowedBody.set_lin_acc(Norm::normalize_cpy(&(requestedMovement - currentMovement)));
+			borrowedBody.set_translation(position);
+			borrowedBody.set_lin_vel(movement);
 		}
 
 		// step
@@ -81,7 +80,8 @@ impl PhysicsSystem {
 
 		//
 		for (entity, body) in self.bodies.iter() {
-			PhysicsSystem::set_position(state, entity, &body.borrow().translation())
+			PhysicsSystem::set_position(state, entity, &body.borrow().translation());
+			PhysicsSystem::set_movement(state, entity, &body.borrow().lin_vel());
 		}
 	}
 
@@ -142,6 +142,24 @@ impl PhysicsSystem {
 			.filter(|c| state.get_owner(*c).unwrap() == *id)
 			// take only the "position" components
 			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "position", _ => false })
+			.map(|c| c.clone()).collect();
+
+		for cmp in list.iter()
+		{
+			state.set(cmp, "x", ::entities::Number(pos.x as f64));
+			state.set(cmp, "y", ::entities::Number(pos.y as f64));
+		}
+	}
+
+	/// changes the movement of an entity
+	fn set_movement(state: &mut EntitiesState, id: &EntityID, pos: &Vec2<f32>)
+	{
+		let list: Vec<ComponentID> = state
+			.get_components_iter()
+			// take only the components owned by the entity
+			.filter(|c| state.get_owner(*c).unwrap() == *id)
+			// take only the "position" components
+			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "movement", _ => false })
 			.map(|c| c.clone()).collect();
 
 		for cmp in list.iter()

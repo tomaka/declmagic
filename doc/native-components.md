@@ -105,9 +105,11 @@ Allows handling of a user input.
 
 ### movement
 
-Determines the requested movement of the entity.
+The movement of the entity.
 
 If there are multiple `movement` components, the movement of the entity is the sum of all the components.
+
+The values in this component are updated when the game runs.
 
 ```rust
 {
@@ -119,7 +121,6 @@ If there are multiple `movement` components, the movement of the entity is the s
 	}
 }
 ```
-
 
 ### physics
 
@@ -133,6 +134,26 @@ WIP
 	}
 }
 ```
+
+### requestedMovement
+
+Determines the requested movement of the entity.
+If there are multiple `requestedMovement` components, the requested movement of the entity is the sum of all the components.
+
+As long as the entity's movement is not equal to its requestedMovement, an acceleration will be applied in order to compensate.
+
+```rust
+{
+	"type": "requestedMovement",
+	"data": {
+		"x": <number (optional)>,
+		"y": <number (optional)>,
+		"z": <number (optional)>
+	}
+}
+```
+
+Units movement should be done by manipulating `requestedMovement`.
 
 
 ## Mechanics
@@ -186,10 +207,15 @@ Defines a custom property
 	"type": "property",
 	"data": {
 		"property": <string>,
-		"value": <anything>
+		"value": <anything>,
+		"priority": <number (optional, default 1)>
 	}
 }
 ```
+
+ - `name`: name of the property
+ - `value`: value of the property
+ - `priority`: if multiple properties of the same name exist on the same entity, the one with the highest priority will take precedence
 
 ### propertyRange
 
@@ -210,3 +236,46 @@ Script to execute when the value of a property is in a certain range.
 	}
 }
 ```
+
+### timeModifier
+
+**(not implemented)**
+
+Applies a modifier on all chronometer in the world
+
+```
+{
+	"type": "timeModifier",
+	"data": {
+		"modifier": <number>
+	}
+}
+```
+
+ - `time`: multiplies the rate at which the time elapses by this number, cannot be native
+
+Add this component for bullet-time effets.
+
+To pause the game, add this component and set `modifier` to 0.
+Pausing the game only affects the physics engine and the animations in the display engine. All scripts, input handlers, etc. will still be executed.
+
+### timedDestruction
+
+**(not implemented)**
+
+This component will self-destruct after a certain time has passed
+
+```
+{
+	"type": "timedDestruction",
+	"data": {
+		"time": <number>,
+		"prototype": <entity>
+	}
+}
+```
+
+ - `time`: number of seconds before destruction
+ - `prototype`: prototype to inherit from, as long as this component exists
+
+This component is useful to add temporary effects on entities.
