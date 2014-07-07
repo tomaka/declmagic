@@ -2,6 +2,7 @@ use entities::{ EntitiesState, EntityID, ComponentID, NativeComponentType };
 use std::collections::{ HashSet, HashMap };
 use std::cell::RefCell;
 use std::rc::Rc;
+use nalgebra::na;
 use nalgebra::na::{ Norm, Translation, Vec2 };
 use ncollide::geom::geom::Geom;
 use nphysics::world::World;
@@ -69,12 +70,15 @@ impl PhysicsSystem {
 			let position = PhysicsSystem::get_position(state, entity);
 			let movement = PhysicsSystem::get_movement(state, entity);
 			let requestedMovement = PhysicsSystem::get_requested_movement(state, entity);
-			let acceleration = Norm::normalize_cpy(&(requestedMovement - movement)) * 5.0f32;
 
 			let mut borrowedBody = body.borrow_mut();
 			borrowedBody.set_translation(position);
 			borrowedBody.set_lin_vel(movement);
-			borrowedBody.set_lin_acc(acceleration);
+
+			if requestedMovement != movement {
+				let acceleration = na::normalize(&(requestedMovement - movement)) * 5.0f32;
+				borrowedBody.set_lin_acc(acceleration);
+			}
 		}
 
 		// step
@@ -108,7 +112,7 @@ impl PhysicsSystem {
 			})
 
 			// add all the elements together
-			.fold(Vec2::new(0.0, 0.0), |vec, a| Vec2::new(vec.x + a.x, vec.y + a.y))
+			.fold(Vec2::new(0.0, 0.0), |vec, a| vec + a)
 	}
 
 	/// returns the total movement of an entity
@@ -132,7 +136,7 @@ impl PhysicsSystem {
 			})
 
 			// add all the elements together
-			.fold(Vec2::new(0.0, 0.0), |vec, a| Vec2::new(vec.x + a.x, vec.y + a.y))
+			.fold(Vec2::new(0.0, 0.0), |vec, a| vec + a)
 	}
 
 	/// returns the total requested movement of an entity
@@ -156,10 +160,11 @@ impl PhysicsSystem {
 			})
 
 			// add all the elements together
-			.fold(Vec2::new(0.0, 0.0), |vec, a| Vec2::new(vec.x + a.x, vec.y + a.y))
+			.fold(Vec2::new(0.0, 0.0), |vec, a| vec + a)
 	}
 
 	/// changes the position of an entity
+	/// TODO: this is wrong
 	fn set_position(state: &mut EntitiesState, id: &EntityID, pos: &Vec2<f32>)
 	{
 		let list: Vec<ComponentID> = state
@@ -178,6 +183,7 @@ impl PhysicsSystem {
 	}
 
 	/// changes the movement of an entity
+	/// TODO: this is wrong
 	fn set_movement(state: &mut EntitiesState, id: &EntityID, pos: &Vec2<f32>)
 	{
 		let list: Vec<ComponentID> = state
