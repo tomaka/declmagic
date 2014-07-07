@@ -1,9 +1,8 @@
-## Native components
+# Native components
 
+## Common
 
-### Common
-
-#### position
+### position
 
 Determines the position of the entity.
 
@@ -23,9 +22,9 @@ The values in this component are updated when the game runs.
 ```
 
 
-### Display
+## Display
 
-#### camera
+### camera
 
 Specifies a camera to be used.
 
@@ -51,7 +50,7 @@ When a scene is being rendered, the `camera` component with the highest priority
 Its position is then applied to all the elements, and then its matrix is applied
 
 
-#### spriteDisplay
+### spriteDisplay
 
 Displays a 2D sprite at the entity's position.
 
@@ -79,9 +78,9 @@ Displays a 2D sprite at the entity's position.
 If some of the coordinates are not specified, they will be automatically determined depending on the others.
 
 
-### Input
+## Input
 
-#### inputHandler
+### inputHandler
 
 Allows handling of a user input.
 
@@ -102,9 +101,9 @@ Allows handling of a user input.
  - `prototypeWhilePressed`: entity to inherit from when the element is down
 
 
-### Physics
+## Physics
 
-#### movement
+### movement
 
 Determines the requested movement of the entity.
 
@@ -122,7 +121,7 @@ If there are multiple `movement` components, the movement of the entity is the s
 ```
 
 
-#### physics
+### physics
 
 WIP
 
@@ -136,9 +135,9 @@ WIP
 ```
 
 
-### Mechanics
+## Mechanics
 
-#### executeNow
+### executeNow
 
 **(not implemented)**
 
@@ -153,7 +152,7 @@ When this component is created, its script will be executed as soon as possible 
 }
 ```
 
-#### externContent
+### externContent
 
 **(not implemented)**
 
@@ -170,7 +169,7 @@ If the content of `resource` is changed, the entities are unloaded.
 }
 ```
 
-#### property
+### property
 
 Defines a custom property
 
@@ -184,7 +183,7 @@ Defines a custom property
 }
 ```
 
-#### propertyRange
+### propertyRange
 
 Script to execute when the value of a property is in a certain range.
 
