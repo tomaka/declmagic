@@ -75,8 +75,8 @@ impl PhysicsSystem {
 			borrowedBody.set_translation(position);
 			borrowedBody.set_lin_vel(movement);
 
-			if requestedMovement != movement {
-				let acceleration = na::normalize(&(requestedMovement - movement)) * 5.0f32;
+			if requestedMovement.is_some() && requestedMovement != Some(movement) {
+				let acceleration = na::normalize(&(requestedMovement.unwrap() - movement)) * 5.0f32;
 				borrowedBody.set_lin_acc(acceleration);
 			}
 		}
@@ -141,7 +141,7 @@ impl PhysicsSystem {
 
 	/// returns the total requested movement of an entity
 	fn get_requested_movement(state: &EntitiesState, id: &EntityID)
-		-> Vec2<f32>
+		-> Option<Vec2<f32>>
 	{
 		state
 			.get_components_iter()
@@ -160,7 +160,7 @@ impl PhysicsSystem {
 			})
 
 			// add all the elements together
-			.fold(Vec2::new(0.0, 0.0), |vec, a| vec + a)
+			.fold(None, |vec: Option<Vec2<f32>>, a| match vec { None => Some(a), Some(v) => Some(v + a) })
 	}
 
 	/// changes the position of an entity
