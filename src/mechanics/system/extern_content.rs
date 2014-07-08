@@ -3,15 +3,17 @@ use std::collections::{ HashSet, HashMap };
 use resources::ResourcesLoader;
 
 pub struct ExternContentSystem {
-	loader: Box<ResourcesLoader + Send + Share>
+	loader: Box<ResourcesLoader + Send + Share>,
+	logger: Box<::log::Logger>
 }
 
 impl ExternContentSystem {
-	pub fn new<RL: ResourcesLoader + Send + Share>(_: &EntitiesState, loader: RL)
+	pub fn new<RL: ResourcesLoader + Send + Share, L: ::log::Logger + 'static>(_: &EntitiesState, loader: RL, logger: L)
 		-> ExternContentSystem
 	{
 		ExternContentSystem {
-			loader: box loader as Box<ResourcesLoader+Send+Share>
+			loader: box loader as Box<ResourcesLoader+Send+Share>,
+			logger: box logger
 		}
 	}
 

@@ -11,17 +11,21 @@ mod custom_display_system;
 pub struct DisplaySystem {
 	display: Arc<ManagedDisplay>,
 	customDisplay: custom_display_system::CustomDisplaySystem,
-	sprites: HashMap<ComponentID, SpriteDisplayer>
+	sprites: HashMap<ComponentID, SpriteDisplayer>,
+	logger: Box<::log::Logger>
 }
 
 impl DisplaySystem {
-	pub fn new(display: Arc<ManagedDisplay>, state: &EntitiesState)
+	pub fn new<L: ::log::Logger + 'static>(display: Arc<ManagedDisplay>, state: &EntitiesState, mut logger: L)
 		-> DisplaySystem
 	{
+		declmagic_info!(logger, "created display system");
+
 		DisplaySystem {
 			display: display.clone(),
 			customDisplay: custom_display_system::CustomDisplaySystem::new(display.clone(), state),
-			sprites: HashMap::new()
+			sprites: HashMap::new(),
+			logger: box logger
 		}
 	}
 

@@ -2,13 +2,17 @@ use super::{ Message, Element, Pressed, Released };
 use entities::{ EntitiesState, EntityID, ComponentID, NativeComponentType };
 use script;
 
-pub struct InputSystem;
+pub struct InputSystem {
+    logger: Box<::log::Logger>
+}
 
 impl InputSystem {
-    pub fn new(_: &EntitiesState)
+    pub fn new<L: ::log::Logger + 'static>(_: &EntitiesState, logger: L)
         -> InputSystem
     {
-        InputSystem
+        InputSystem {
+            logger: box logger
+        }
     }
 
     pub fn process(&mut self, state: &mut EntitiesState, _: &u64, messages: &[Message])

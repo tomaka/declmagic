@@ -5,7 +5,7 @@
 extern crate collections;
 extern crate gl;
 extern crate libc;
-extern crate log;
+extern crate stdlog = "log";
 extern crate glob;
 extern crate nalgebra;
 extern crate ncollide = "ncollide2df32";
@@ -17,6 +17,9 @@ extern crate sync;
 
 use std::sync::Arc;
 use display::Drawable;
+
+#[macro_escape]
+pub mod log;
 
 pub mod resources;
 pub mod entities;
@@ -51,15 +54,17 @@ impl Game {
 	pub fn new<RL: resources::ResourcesLoader+Send+Share>(resources: RL)
 		-> Game
 	{
+		let logger = ::log::LogSystem::new();
+
 		let display = Arc::new(display::managed_display::ManagedDisplay::new(display::raw::Display::new(1024, 768, "Game"), box resources.clone() as Box<resources::ResourcesLoader+Send+Share>));
 
 		let mut state = entities::EntitiesState::new();
 		entities::loader::load(&resources, "main", &mut state).unwrap();
 
-		let displaySystem = display::DisplaySystem::new(display.clone(), &state);
-		let inputSystem = input::InputSystem::new(&state);
-		let physicsSystem = physics::PhysicsSystem::new(&state);
-		let mechanicsSystem = mechanics::MechanicsSystem::new(&state, resources.clone());
+		let displaySystem = display::DisplaySystem::new(display.clone(), &state, logger.clone());
+		let inputSystem = input::InputSystem::new(&state, logger.clone());
+		let physicsSystem = physics::PhysicsSystem::new(&state, logger.clone());
+		let mechanicsSystem = mechanics::MechanicsSystem::new(&state, resources.clone(), logger.clone());
 
 		Game {
 			display: display.clone(),

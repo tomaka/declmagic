@@ -10,11 +10,12 @@ use nphysics::object::{ RigidBody };
 
 pub struct PhysicsSystem {
 	world: World,
-	bodies: HashMap<EntityID, Rc<RefCell<RigidBody>>>
+	bodies: HashMap<EntityID, Rc<RefCell<RigidBody>>>,
+	logger: Box<::log::Logger>
 }
 
 impl PhysicsSystem {
-	pub fn new(_: &EntitiesState)
+	pub fn new<L: ::log::Logger + 'static>(_: &EntitiesState, mut logger: L)
 		-> PhysicsSystem
 	{
 		let mut world = World::new();
@@ -26,7 +27,8 @@ impl PhysicsSystem {
 
 		PhysicsSystem {
 			world: world,
-			bodies: HashMap::new()
+			bodies: HashMap::new(),
+			logger: box logger
 		}
 	}
 
