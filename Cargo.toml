@@ -18,5 +18,5 @@ git = "https://github.com/Tomaka17/rust-hl-lua"
 #[dependencies.glfw]
 #git = "https://github.com/bjz/glfw-rs"
 
-[dependencies.ears]
-git = "https://github.com/jeremyletang/ears"
+#[dependencies.ears]
+#git = "https://github.com/jeremyletang/ears"
