@@ -9,9 +9,12 @@ use super::super::sprite_displayer::SpriteDisplayer;
 use super::super::Drawable;
 use super::super::raw::{ VertexBuffer, IndexBuffer, Shader, Program, ProgramUniforms };
 
+use log::Logger;
+
 pub struct CustomDisplaySystem {
 	display: Arc<ManagedDisplay>,
-	elements: HashMap<ComponentID, Element>
+	elements: HashMap<ComponentID, Element>,
+	logger: Box<Logger>
 }
 
 struct Element {
@@ -26,12 +29,13 @@ struct Element {
 }
 
 impl CustomDisplaySystem {
-	pub fn new(display: Arc<ManagedDisplay>, _: &EntitiesState)
+	pub fn new<L: ::log::Logger + 'static>(display: Arc<ManagedDisplay>, _: &EntitiesState, mut logger: L)
 		-> CustomDisplaySystem
 	{
 		CustomDisplaySystem {
 			display: display.clone(),
-			elements: HashMap::new()
+			elements: HashMap::new(),
+			logger: box logger
 		}
 	}
 
@@ -39,7 +43,10 @@ impl CustomDisplaySystem {
 	{
 		self.update_custom_displayers(state);
 
-		let camera = super::DisplaySystem::get_camera(state);
+		let camera = super::DisplaySystem::get_camera(state).unwrap_or_else(|| {
+			declmagic_warn!(self.logger, "no active camera on the scene");
+			Eye::new_identity(4)
+		});
 
 	 	for (cmp, element) in self.elements.mut_iter() {
 	 		let pos = super::DisplaySystem::get_position(state, &state.get_owner(cmp).unwrap());

@@ -23,7 +23,7 @@ impl DisplaySystem {
 
 		DisplaySystem {
 			display: display.clone(),
-			customDisplay: custom_display_system::CustomDisplaySystem::new(display.clone(), state),
+			customDisplay: custom_display_system::CustomDisplaySystem::new(display.clone(), state, logger.clone()),
 			sprites: HashMap::new(),
 			logger: box logger
 		}
@@ -33,7 +33,10 @@ impl DisplaySystem {
 	{
 		self.update_sprite_displayers(state);
 
-		let camera = DisplaySystem::get_camera(state);
+		let camera = DisplaySystem::get_camera(state).unwrap_or_else(|| {
+			declmagic_warn!(self.logger, "no active camera on the scene");
+			Eye::new_identity(4)
+		});
 
 	 	for (cmp, sprite) in self.sprites.iter() {
 	 		let pos = DisplaySystem::get_position(state, &state.get_owner(cmp).unwrap());
@@ -64,7 +67,13 @@ impl DisplaySystem {
 		{	let toCreate = listOfComponents.iter().filter(|e| !self.sprites.contains_key(e.clone())).map(|e| e.clone()).collect::<Vec<ComponentID>>();
 			for spriteDisplayComponent in toCreate.move_iter() {
 				// getting the name of the texture
-				let textureName = match state.get(&spriteDisplayComponent, "texture") { Ok(&::entities::String(ref s)) => s, _ => continue };
+				let textureName = match state.get(&spriteDisplayComponent, "texture") {
+					Ok(&::entities::String(ref s)) => s,
+					_ => {
+						declmagic_error!(self.logger, "component {} has no valid \"texture\" element", spriteDisplayComponent)
+						continue
+					}
+				};
 
 				let mut spriteDisplayer = SpriteDisplayer::new(self.display.clone(), textureName.as_slice()).unwrap();
 
@@ -84,7 +93,7 @@ impl DisplaySystem {
 
 	/// returns the camera matrix of the scene
 	fn get_camera(state: &EntitiesState)
-		-> Mat4<f32>
+		-> Option<Mat4<f32>>
 	{
 		let cameraInfos = state
 			.get_components_iter()
@@ -95,7 +104,7 @@ impl DisplaySystem {
 			.map(|(c, data)| (c, data.iter().filter_map(|elem| match elem { &::entities::Number(ref n) => Some(n.clone() as f32), _ => None }).collect::<Vec<f32>>()) );
 
 		if cameraInfos.is_none() {
-			return Eye::new_identity(4);
+			return None;
 		}
 
 		let (cameraComponent, matrixData) = cameraInfos.unwrap();
@@ -104,7 +113,7 @@ impl DisplaySystem {
 		let position = DisplaySystem::get_position(state, &state.get_owner(cameraComponent).unwrap());
 		let positionMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -position.x, -position.y, -position.z, 1.0);
 
-		positionMatrix * matrix
+		Some(positionMatrix * matrix)
 	}
 
 	/// returns the position of an entity
