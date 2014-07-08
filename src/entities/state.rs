@@ -162,6 +162,10 @@ impl EntitiesState {
     pub fn create_native_component(&mut self, owner: &EntityID, typename: &str, data: HashMap<String, Data>)
         -> Result<ComponentID, StateError>
     {
+        if !self.entities.contains_key(owner) {
+            return Err(EntityNotFound(owner.clone()))
+        }
+
         let newID = self.next_component_id;
 
         let newComponent = Component {
@@ -173,7 +177,7 @@ impl EntitiesState {
             cmp_type: NativeComponentType(typename.to_string())
         };
 
-        (try!(self.get_entity_by_id_mut(owner))).components.push(newID);
+        self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
 
         self.components.insert(newID, newComponent);
         self.next_component_id = self.next_component_id + 1;
@@ -186,10 +190,16 @@ impl EntitiesState {
     /**
      * Creates a new component of an entity type
      */
-    /// TODO: better error handling
     pub fn create_component_from_entity(&mut self, owner: &EntityID, typename: &EntityID, data: HashMap<String, Data>)
         -> Result<ComponentID, StateError>
     {
+        if !self.entities.contains_key(owner) {
+            return Err(EntityNotFound(owner.clone()))
+        }
+        if !self.entities.contains_key(typename) {
+            return Err(EntityNotFound(typename.clone()))
+        }
+
         let newID = self.next_component_id;
 
         let newComponent = Component {
@@ -201,11 +211,11 @@ impl EntitiesState {
             cmp_type: EntityComponentType(typename.clone())
         };
 
-        (try!(self.get_entity_by_id_mut(owner))).components.push(newID);
-        (try!(self.get_entity_by_id_mut(typename))).components_of_type.push(newID);
+        self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
+        self.get_entity_by_id_mut(typename).unwrap().components_of_type.push(newID);
 
         // creating the list of components to inherit
-        let components_to_inherit: Vec<ComponentID> = (try!(self.get_entity_by_id(typename))).components.iter().map(|c| c.clone()).collect();
+        let components_to_inherit: Vec<ComponentID> = self.get_entity_by_id(typename).unwrap().components.iter().map(|c| c.clone()).collect();
 
         self.components.insert(newID, newComponent);
         self.next_component_id = self.next_component_id + 1;
@@ -215,7 +225,7 @@ impl EntitiesState {
             match self.create_inherited_component(owner, &newID, &cmp) {
                 Ok(_) => (),
                 Err(err) => {
-                    self.destroy_component(&newID);
+                    self.destroy_component(&newID);     // rollback
                     return Err(err);
                 }
             }
@@ -230,12 +240,13 @@ impl EntitiesState {
     pub fn destroy_component(&mut self, id: &ComponentID)
         -> Result<(), StateError>
     {
-        let children = (try!(self.get_component_by_id(id))).children.clone();
-        let linked = (try!(self.get_component_by_id(id))).linked_from.clone();
+        let (children, linked, parent) = {
+            let cmp = try!(self.get_component_by_id(id));
+            (cmp.children.clone(), cmp.linked_from.clone(), cmp.parent)
+        };
 
-        let parent = (try!(self.get_component_by_id(id))).parent;
         if parent.is_some() {
-            let mut p = (try!(self.get_component_by_id_mut(&parent.unwrap())));
+            let mut p = self.get_component_by_id_mut(&parent.unwrap()).unwrap();
             let pos = p.children.iter().position(|c| *c == *id).unwrap();
             p.children.remove(pos);
         }
@@ -250,8 +261,8 @@ impl EntitiesState {
 
         // removing from entity
         {
-            let owner = (try!(self.get_component_by_id(id))).owner;
-            let mut entity = try!(self.get_entity_by_id_mut(&owner));
+            let owner = self.get_component_by_id(id).unwrap().owner;
+            let mut entity = self.get_entity_by_id_mut(&owner).unwrap();
             let pos = entity.components.iter().position(|e| *e == *id).unwrap();
             entity.components.remove(pos);
         }
@@ -264,16 +275,16 @@ impl EntitiesState {
         Ok(())
     }
 
+    /**
+     * Modifies an element of a component
+     */
     pub fn set(&mut self, id: &ComponentID, field: &str, data: Data)
         -> Result<(), StateError>
     {
         let mut idIter = id.clone();
 
         loop {
-            let mut component = match self.components.find_mut(&idIter) {
-                None => return Err(ComponentNotFound(idIter)),
-                Some(c) => c
-            };
+            let mut component = try!(self.get_component_by_id_mut(&idIter));
 
             match &mut component.data {
                 &ComponentDataNative(ref mut val) => {
@@ -290,6 +301,9 @@ impl EntitiesState {
         unreachable!();
     }
 
+    /**
+     * Returns an element of a component
+     */
     pub fn get<'a>(&'a self, id: &ComponentID, field: &str)
         -> Result<&'a Data, StateError>
     {
@@ -306,42 +320,63 @@ impl EntitiesState {
         }
     }
 
+    /**
+     * Returns the owner of the component
+     */
     pub fn get_owner(&self, id: &ComponentID)
         -> Result<EntityID, StateError>
     {
         Ok((try!(self.get_component_by_id(id))).owner)
     }
 
+    /**
+     * Returns the type of the component
+     */
     pub fn get_type(&self, id: &ComponentID)
         -> Result<ComponentType, StateError>
     {
         Ok((try!(self.get_component_by_id(id))).cmp_type.clone())
     }
 
+    /**
+     * Returns an iterator to all the entities in the state
+     */
     pub fn get_entities_iter<'a>(&'a self)
         -> std::collections::hashmap::Keys<'a, EntityID, EntityData>
     {
         self.entities.keys()
     }
 
+    /**
+     * Returns the name of an entity
+     */
     pub fn get_entity_name<'a>(&'a self, id: &EntityID)
         -> Result<Option<String>, StateError>
     {
         Ok((try!(self.get_entity_by_id(id))).name.clone())
     }
 
+    /**
+     * Returns the list of all entities with the given name
+     */
     pub fn get_entities_by_name<'a>(&'a self, name: &str)
         -> Vec<EntityID>
     {
         self.entities.iter().filter(|&(_, ref e)| e.name == Some(name.to_string())).map(|(id, _)| id.clone()).collect()
     }
 
+    /**
+     * Returns an iterator to all the components in the state
+     */
     pub fn get_components_iter<'a>(&'a self)
         -> std::collections::hashmap::Keys<'a, ComponentID, Component>
     {
         self.components.keys()
     }
     
+    /**
+     * Returns true if the component is visible
+     */
     pub fn is_component_visible(&self, id: &ComponentID)
         -> Result<bool, StateError>
     {
@@ -349,23 +384,41 @@ impl EntitiesState {
         Ok((try!(self.get_entity_by_id(&owner))).visible)
     }
 
+    /**
+     * Sets an entity as parent of another one
+     * When a component is destroyed, all its children are destroyed it
+     * If the component already has a parent, it's removed
+     */
     pub fn set_component_parent(&mut self, component: &ComponentID, parent: &ComponentID)
         -> Result<(), StateError>
     {
-        if (try!(self.get_component_by_id_mut(component))).parent.is_some() {
+        if !self.components.contains_key(component) {
+            return Err(ComponentNotFound(component.clone()))
+        }
+        if !self.components.contains_key(parent) {
+            return Err(ComponentNotFound(parent.clone()))
+        }
+
+        if self.get_component_by_id_mut(component).unwrap().parent.is_some() {
             self.clear_component_parent(component);
         }
 
-        (try!(self.get_component_by_id_mut(component))).parent = Some(parent.clone());
-        (try!(self.get_component_by_id_mut(parent))).children.push(component.clone());
+        self.get_component_by_id_mut(component).unwrap().parent = Some(parent.clone());
+        self.get_component_by_id_mut(parent).unwrap().children.push(component.clone());
 
         Ok(())
     }
 
+    /**
+     * Resets the parent of an entity, breaking the parent-child link
+     */
     pub fn clear_component_parent(&mut self, component: &ComponentID) {
         unimplemented!()
     }
 
+    /**
+     * Returns the list of children of a component
+     */
     pub fn get_component_children(&self, component: &ComponentID)
         -> Result<Vec<ComponentID>, StateError>
     {
@@ -375,10 +428,19 @@ impl EntitiesState {
     /**
      * Creates a component inherited from another
      */
-    // TODO: better error handling
     fn create_inherited_component(&mut self, owner: &EntityID, parent: &ComponentID, inherit: &ComponentID)
         -> Result<ComponentID, StateError>
     {
+        if !self.entities.contains_key(owner) {
+            return Err(EntityNotFound(owner.clone()))
+        }
+        if !self.components.contains_key(parent) {
+            return Err(ComponentNotFound(parent.clone()))
+        }
+        if !self.components.contains_key(inherit) {
+            return Err(ComponentNotFound(inherit.clone()))
+        }
+
         let newID = self.next_component_id;
 
         let newComponent = Component {
@@ -387,17 +449,37 @@ impl EntitiesState {
             linked_from: Vec::new(),
             parent: Some(parent.clone()),
             children: Vec::new(),
-            cmp_type: (try!(self.get_component_by_id(inherit))).cmp_type.clone()
+            cmp_type: self.get_component_by_id(inherit).unwrap().cmp_type.clone()
         };
 
-        (try!(self.get_component_by_id_mut(inherit))).linked_from.push(newID);
-        (try!(self.get_component_by_id_mut(parent))).children.push(newID);
-        (try!(self.get_entity_by_id_mut(owner))).components.push(newID);
+        self.get_component_by_id_mut(inherit).unwrap().linked_from.push(newID);
+        self.get_component_by_id_mut(parent).unwrap().children.push(newID);
+        self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
 
         self.components.insert(newID, newComponent);
 
         self.next_component_id = self.next_component_id + 1;
 
+        // recursively inheriting if necessary
+        match self.get_component_by_id(inherit).unwrap().cmp_type.clone() {
+            NativeComponentType(_) => (),
+            EntityComponentType(entity) => {
+                let components_to_inherit: Vec<ComponentID> = self.get_entity_by_id(&entity).unwrap().components.iter().map(|c| c.clone()).collect();
+
+                // inheriting components
+                for cmp in components_to_inherit.move_iter() {
+                    match self.create_inherited_component(owner, &newID, &cmp) {
+                        Ok(_) => (),
+                        Err(err) => {
+                            self.destroy_component(&newID);     // rollback
+                            return Err(err);
+                        }
+                    }
+                }
+            }
+        }
+
+        // returning ID
         Ok(newID)
     }
 
