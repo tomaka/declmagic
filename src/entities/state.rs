@@ -441,13 +441,15 @@ impl EntitiesState {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::EntitiesState;
 
     #[test]
     fn basic() {
         let mut state = EntitiesState::new();
 
-        let eID = state.create_entity();
+        let eID = state.create_entity(Some(format!("myname")), true);
 
         let cmpID = state.create_native_component(&eID, "test", HashMap::new());
     }

@@ -1,0 +1,13 @@
+before_install:
+  - yes | sudo add-apt-repository ppa:hansjorg/rust
+  - yes | sudo add-apt-repository ppa:cmrx64/cargo
+  - sudo apt-get update
+
+install:
+  - sudo apt-get install rust-nightly cargo liblua5.2-dev libglfw3-dev
+
+script:
+  - cargo test
+
+notifications:
+  email: false
