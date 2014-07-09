@@ -38,10 +38,26 @@ pub trait EntitiesHelper {
         let value = self
             .get_components_list().move_iter()
             .filter(|c| &self.get_owner(c).unwrap() == id)
-            .filter(|c| match self.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "property", _ => false })
+            .filter(|c| match self.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "property" || t.as_slice() == "propertyView", _ => false })
             .filter(|c| match self.get(c, "property") { Ok(&String(ref n)) => n.as_slice() == propname, _ => false })
             .max_by(|c| match self.get(c, "priority") { Ok(&::entities::Number(ref n)) => (((*n) * 1000f64) as int), _ => 1000 })
-            .and_then(|c| match self.get(&c, "value") { Ok(&FromProperty(_)) => None, Ok(n) => Some(n.clone()), _ => None });
+            .and_then(|c| {
+                let cmpType = match self.get_type(&c) {
+                    Ok(NativeComponentType(t)) => t.clone(),
+                    _ => fail!()
+                };
+
+                match cmpType.as_slice() {
+                    "property" =>
+                        match self.get(&c, "value") { Ok(&FromProperty(_)) => None, Ok(n) => Some(n.clone()), _ => None },
+                    "propertyView" => {
+                        let script = match self.get(&c, "value") { Ok(&FromProperty(_)) => return None, Ok(n) => n.clone(), _ => return None };
+                        //::script::execute(self, c, script);
+                        unimplemented!()
+                    },
+                    _ => fail!()
+                }
+            });
 
         match value {
             Some(v) => Ok(v),
