@@ -32,6 +32,23 @@ pub trait EntitiesHelper {
     fn get<'a>(&'a self, id: &ComponentID, field: &str)
         -> Result<&'a Data, StateError>;
 
+    fn get_property_value(&self, id: &EntityID, propname: &str)
+        -> Result<Data, StateError>
+    {
+        let value = self
+            .get_components_list().move_iter()
+            .filter(|c| &self.get_owner(c).unwrap() == id)
+            .filter(|c| match self.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "property", _ => false })
+            .filter(|c| match self.get(c, "property") { Ok(&String(ref n)) => n.as_slice() == propname, _ => false })
+            .max_by(|c| match self.get(c, "priority") { Ok(&::entities::Number(ref n)) => (((*n) * 1000f64) as int), _ => 1000 })
+            .and_then(|c| match self.get(&c, "value") { Ok(&FromProperty(_)) => None, Ok(n) => Some(n.clone()), _ => None });
+
+        match value {
+            Some(v) => Ok(v),
+            None => Ok(Empty)
+        }
+    }
+
     fn get_and_resolve(&self, id: &ComponentID, field: &str)
         -> Result<Data, StateError>
     {
@@ -42,18 +59,7 @@ pub trait EntitiesHelper {
 
         let owner = try!(self.get_owner(id));
 
-        let value = self
-            .get_components_list().move_iter()
-            .filter(|c| self.get_owner(c).unwrap() == owner)
-            .filter(|c| match self.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "property", _ => false })
-            .filter(|c| match self.get(c, "property") { Ok(&String(ref n)) => n == propname, _ => false })
-            .max_by(|c| match self.get(c, "priority") { Ok(&::entities::Number(ref n)) => (((*n) * 1000f64) as int), _ => 1000 })
-            .and_then(|c| match self.get(&c, "value") { Ok(&FromProperty(_)) => None, Ok(n) => Some(n.clone()), _ => None });
-
-        match value {
-            Some(v) => Ok(v),
-            None => Ok(Empty)
-        }
+        self.get_property_value(&owner, propname.as_slice())
     }
 
     fn get_as_number(&self, id: &ComponentID, field: &str)
