@@ -1,4 +1,4 @@
-use entities::{ EntitiesState, EntityID, ComponentID, NativeComponentType };
+use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComponentType };
 use std::collections::{ HashSet, HashMap };
 
 use resources::ResourcesLoader;

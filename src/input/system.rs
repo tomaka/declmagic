@@ -1,5 +1,5 @@
 use super::{ Message, Element, Pressed, Released };
-use entities::{ EntitiesState, EntityID, ComponentID, NativeComponentType };
+use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComponentType };
 use script;
 
 pub struct InputSystem {

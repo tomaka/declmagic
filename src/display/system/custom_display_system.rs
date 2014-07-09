@@ -1,4 +1,4 @@
-use entities::{ EntitiesState, EntityID, ComponentID, NativeComponentType };
+use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComponentType };
 use nalgebra::na::{ Mat4, Vec3, Eye };
 
 use std::collections::{ HashSet, HashMap };

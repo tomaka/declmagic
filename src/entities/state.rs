@@ -1,5 +1,6 @@
 extern crate std;
 
+use super::EntitiesHelper;
 use std::collections::HashMap;
 
 /**
@@ -302,25 +303,6 @@ impl EntitiesState {
     }
 
     /**
-     * Returns an element of a component
-     */
-    pub fn get<'a>(&'a self, id: &ComponentID, field: &str)
-        -> Result<&'a Data, StateError>
-    {
-        match (try!(self.get_component_by_id(id))).data {
-            ComponentDataNative(ref data) => {
-                match data.find_equiv(&field) {
-                    Some(a) => Ok(a),
-                    None => Err(FieldDoesNotExist(id.clone(), field.to_string()))
-                }
-            },
-            ComponentDataLink(c) => {
-                self.get(&c, field)
-            }
-        }
-    }
-
-    /**
      * Returns the owner of the component
      */
     pub fn get_owner(&self, id: &ComponentID)
@@ -516,6 +498,27 @@ impl EntitiesState {
         match self.components.find_mut(id) {
             None => Err(ComponentNotFound(id.clone())),
             Some(c) => Ok(c)
+        }
+    }
+}
+
+impl EntitiesHelper for EntitiesState {
+    /**
+     * Returns an element of a component
+     */
+    fn get<'a>(&'a self, id: &ComponentID, field: &str)
+        -> Result<&'a Data, StateError>
+    {
+        match (try!(self.get_component_by_id(id))).data {
+            ComponentDataNative(ref data) => {
+                match data.find_equiv(&field) {
+                    Some(a) => Ok(a),
+                    None => Err(FieldDoesNotExist(id.clone(), field.to_string()))
+                }
+            },
+            ComponentDataLink(c) => {
+                self.get(&c, field)
+            }
         }
     }
 }

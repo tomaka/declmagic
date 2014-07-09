@@ -1,5 +1,5 @@
 use super::managed_display::ManagedDisplay;
-use entities::{ EntitiesState, EntityID, ComponentID, NativeComponentType };
+use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComponentType };
 use nalgebra::na::{ Mat4, Vec3, Eye };
 use std::collections::{ HashSet, HashMap };
 use std::sync::Arc;
@@ -67,8 +67,8 @@ impl DisplaySystem {
 		{	let toCreate = listOfComponents.iter().filter(|e| !self.sprites.contains_key(e.clone())).map(|e| e.clone()).collect::<Vec<ComponentID>>();
 			for spriteDisplayComponent in toCreate.move_iter() {
 				// getting the name of the texture
-				let textureName = match state.get(&spriteDisplayComponent, "texture") {
-					Ok(&::entities::String(ref s)) => s,
+				let textureName = match state.get_as_string(&spriteDisplayComponent, "texture") {
+					Some(s) => s,
 					_ => {
 						declmagic_error!(self.logger, "component {} has no valid \"texture\" element", spriteDisplayComponent)
 						continue

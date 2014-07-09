@@ -1,4 +1,4 @@
-use entities::{ EntitiesState, EntityID, ComponentID, NativeComponentType };
+use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComponentType };
 use nalgebra::na::Vec2;
 
 pub use self::system::MechanicsSystem;
