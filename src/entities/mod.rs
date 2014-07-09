@@ -8,17 +8,51 @@ pub mod loader;
 mod state;
 
 pub trait EntitiesHelper {
+    /**
+     * Returns the type of the component
+     */
+    fn get_type(&self, id: &ComponentID)
+        -> Result<ComponentType, StateError>;
+
+    /**
+     * Returns the list of all the components in the state
+     */
+    fn get_components_list(&self)
+        -> Vec<ComponentID>;
+    
+    /**
+     * Returns the owner of the component
+     */
+    fn get_owner(&self, id: &ComponentID)
+        -> Result<EntityID, StateError>;
+
+    /**
+     * Returns an element of a component
+     */
     fn get<'a>(&'a self, id: &ComponentID, field: &str)
         -> Result<&'a Data, StateError>;
 
     fn get_and_resolve(&self, id: &ComponentID, field: &str)
         -> Result<Data, StateError>
     {
-        match try!(self.get(id, field)) {
-            &FromProperty(ref propname) => {
-                unimplemented!()
-            },
-            a => Ok(a.clone())
+        let propname = match try!(self.get(id, field)) {
+            &FromProperty(ref p) => p,
+            a => return Ok(a.clone())
+        };
+
+        let owner = try!(self.get_owner(id));
+
+        let value = self
+            .get_components_list().move_iter()
+            .filter(|c| self.get_owner(c).unwrap() == owner)
+            .filter(|c| match self.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "property", _ => false })
+            .filter(|c| match self.get(c, "property") { Ok(&String(ref n)) => n == propname, _ => false })
+            .max_by(|c| match self.get(c, "priority") { Ok(&::entities::Number(ref n)) => (((*n) * 1000f64) as int), _ => 1000 })
+            .and_then(|c| match self.get(&c, "value") { Ok(&FromProperty(_)) => None, Ok(n) => Some(n.clone()), _ => None });
+
+        match value {
+            Some(v) => Ok(v),
+            None => Ok(Empty)
         }
     }
 

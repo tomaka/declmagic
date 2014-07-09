@@ -208,9 +208,12 @@ fn load_data_entry(output: &mut EntitiesState, element: &json::Json, loader: &Re
 				super::Entity(entityID)
 
 			} else if key.as_slice().eq_ignore_ascii_case("entity") {
-
 				let requestedName = match val.as_string() { Some(a) => a, None => return Err(format!("Component data element object of type Entity expects a string")) };
 				super::Entity(try!(load_entity_from_name(output, requestedName, loader, loadedDocs)))
+				
+			} else if key.as_slice().eq_ignore_ascii_case("property") {
+				let requestedProp = match val.as_string() { Some(a) => a, None => return Err(format!("Component data element object of type Property expects a string")) };
+				super::FromProperty(requestedProp.to_string())
 				
 			} else {
 				return Err(format!("Got invalid key for component data element object: {}", key));

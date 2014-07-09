@@ -157,6 +157,13 @@ impl EntitiesState {
         Ok(())
     }
 
+
+    pub fn get_components_iter<'a>(&'a self)
+        -> std::collections::hashmap::Keys<'a, ComponentID, Component>
+    {
+        self.components.keys()
+    }
+
     /**
      * Creates a new component of native type
      */
@@ -303,24 +310,6 @@ impl EntitiesState {
     }
 
     /**
-     * Returns the owner of the component
-     */
-    pub fn get_owner(&self, id: &ComponentID)
-        -> Result<EntityID, StateError>
-    {
-        Ok((try!(self.get_component_by_id(id))).owner)
-    }
-
-    /**
-     * Returns the type of the component
-     */
-    pub fn get_type(&self, id: &ComponentID)
-        -> Result<ComponentType, StateError>
-    {
-        Ok((try!(self.get_component_by_id(id))).cmp_type.clone())
-    }
-
-    /**
      * Returns an iterator to all the entities in the state
      */
     pub fn get_entities_iter<'a>(&'a self)
@@ -347,15 +336,6 @@ impl EntitiesState {
         self.entities.iter().filter(|&(_, ref e)| e.name == Some(name.to_string())).map(|(id, _)| id.clone()).collect()
     }
 
-    /**
-     * Returns an iterator to all the components in the state
-     */
-    pub fn get_components_iter<'a>(&'a self)
-        -> std::collections::hashmap::Keys<'a, ComponentID, Component>
-    {
-        self.components.keys()
-    }
-    
     /**
      * Returns true if the component is visible
      */
@@ -503,9 +483,24 @@ impl EntitiesState {
 }
 
 impl EntitiesHelper for EntitiesState {
-    /**
-     * Returns an element of a component
-     */
+    fn get_components_list(&self)
+        -> Vec<ComponentID>
+    {
+        self.get_components_iter().map(|e| e.clone()).collect()
+    }
+
+    fn get_type(&self, id: &ComponentID)
+        -> Result<ComponentType, StateError>
+    {
+        Ok((try!(self.get_component_by_id(id))).cmp_type.clone())
+    }
+    
+    fn get_owner(&self, id: &ComponentID)
+        -> Result<EntityID, StateError>
+    {
+        Ok((try!(self.get_component_by_id(id))).owner)
+    }
+
     fn get<'a>(&'a self, id: &ComponentID, field: &str)
         -> Result<&'a Data, StateError>
     {
