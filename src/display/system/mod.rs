@@ -11,7 +11,7 @@ mod custom_display_system;
 pub struct DisplaySystem {
 	display: Arc<ManagedDisplay>,
 	customDisplay: custom_display_system::CustomDisplaySystem,
-	sprites: HashMap<ComponentID, SpriteDisplayer>,
+	sprites: HashMap<ComponentID, (Option<SpriteDisplayer>, String)>,
 	logger: Box<::log::Logger>
 }
 
@@ -38,10 +38,10 @@ impl DisplaySystem {
 			Eye::new_identity(4)
 		});
 
-	 	for (cmp, sprite) in self.sprites.iter() {
+	 	for (cmp, &(ref sprite, _)) in self.sprites.iter() {
 	 		let pos = DisplaySystem::get_position(state, &state.get_owner(cmp).unwrap());
 	 		let translationMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, pos.x, pos.y, pos.z, 1.0);
-			sprite.draw(&(translationMatrix * camera));
+			sprite.as_ref().map(|e| e.draw(&(translationMatrix * camera)));
 		}
 
 		self.customDisplay.draw(state);
@@ -66,27 +66,37 @@ impl DisplaySystem {
 		// adding elements that are not yet created
 		{	let toCreate = listOfComponents.iter().filter(|e| !self.sprites.contains_key(e.clone())).map(|e| e.clone()).collect::<Vec<ComponentID>>();
 			for spriteDisplayComponent in toCreate.move_iter() {
-				// getting the name of the texture
-				let textureName = match state.get_as_string(&spriteDisplayComponent, "texture") {
-					Some(s) => s,
-					_ => {
-						declmagic_error!(self.logger, "component {} has no valid \"texture\" element", spriteDisplayComponent)
-						continue
-					}
-				};
-
-				let mut spriteDisplayer = SpriteDisplayer::new(self.display.clone(), textureName.as_slice()).unwrap();
-
-				// getting coordinates
-				spriteDisplayer.set_rectangle_coords(
-					match state.get(&spriteDisplayComponent, "leftX") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
-					match state.get(&spriteDisplayComponent, "topY") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
-					match state.get(&spriteDisplayComponent, "rightX") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
-					match state.get(&spriteDisplayComponent, "bottomY") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None }
-				);
-
 				// inserting in sprites list
-				self.sprites.insert(spriteDisplayComponent.clone(), spriteDisplayer);
+				self.sprites.insert(spriteDisplayComponent.clone(), (None, format!("")));
+			}
+		}
+
+		// updating everything
+		for (component, &(ref mut sprite, ref mut currTexName)) in self.sprites.mut_iter() {
+			// getting the name of the texture
+			let textureName = match state.get_as_string(component, "texture") {
+				Some(s) => s,
+				_ => {
+					// TODO: 
+					//declmagic_error!(self.logger, "component {} has no valid \"texture\" element", component)
+					continue
+				}
+			};
+
+			if sprite.is_none() || currTexName.as_slice() != textureName.as_slice() {
+				(*sprite) = Some(SpriteDisplayer::new(self.display.clone(), textureName.as_slice()).unwrap());
+			}
+
+			// getting coordinates
+			match sprite {
+				&Some(ref mut s) =>
+					s.set_rectangle_coords(
+						match state.get(component, "leftX") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
+						match state.get(component, "topY") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
+						match state.get(component, "rightX") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
+						match state.get(component, "bottomY") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None }
+					),
+				_ => fail!()
 			}
 		}
 	}
