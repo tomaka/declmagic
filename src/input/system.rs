@@ -40,9 +40,9 @@ impl InputSystem {
                                 // take only the "inputHandler" components
                                 .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "inputHandler", _ => false })
                                 // filter if they have the right element
-                                .filter(|c| match state.get(*c, "element") { Ok(&::entities::String(ref s)) => s == &elementStr, _ => false })
+                                .filter(|c| match state.get_as_string(*c, "element") { Some(s) => s == elementStr, _ => false })
                                 // obtain the script and the component id
-                                .filter_map(|c| match state.get(c, "script") { Ok(&::entities::String(ref s)) => Some((c.clone(), s.clone())), _ => None })
+                                .filter_map(|c| match state.get_as_string(c, "script") { Some(s) => Some((c.clone(), s)), _ => None })
 
                                 .collect::<Vec<(ComponentID, String)>>().move_iter()
             {
@@ -55,10 +55,9 @@ impl InputSystem {
                                 // take only the "inputHandler" components
                                 .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "inputHandler", _ => false })
                                 // filter if they have the right element
-                                .filter(|c| match state.get(*c, "element") { Ok(&::entities::String(ref s)) => s == &elementStr, _ => false })
+                                .filter(|c| match state.get_as_string(*c, "element") { Some(s) => s == elementStr, _ => false })
                                 // obtain the script and the component id
-                                .filter_map(|c| match state.get(c, "prototypeWhilePressed") { Ok(&::entities::Entity(ref id)) => Some((c.clone(), id.clone())), _ => None })
-
+                                .filter_map(|c| match state.get_as_entity(c, "prototypeWhilePressed") { Some(id) => Some((c.clone(), id)), _ => None })
                                 .collect::<Vec<(ComponentID, EntityID)>>().move_iter()
             {
                 let children = state.get_component_children(&component).unwrap();

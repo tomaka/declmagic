@@ -38,7 +38,7 @@ impl PhysicsSystem {
 		let listOfEntities: HashSet<EntityID> = state.get_components_iter()
             .filter(|c| state.is_component_visible(*c).unwrap())
 			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "physics", _ => false })
-			.filter(|c| match state.get(*c, "activated") { Ok(&::entities::Boolean(ref b)) => *b, _ => false })
+			.filter(|c| match state.get_as_boolean(*c, "activated") { Some(b) => b, _ => false })
 			.map(|c| state.get_owner(c).unwrap())
 			.collect();
 
@@ -107,11 +107,11 @@ impl PhysicsSystem {
             .filter(|c| match state.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "position", _ => false })
 
             // build a vector from each of the component
-            .filter_map(|cmp| match (state.get(&cmp, "x"), state.get(&cmp, "y"), state.get(&cmp, "z")) {
-                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), Ok(&::entities::Number(ref z)))
-                    => Some(na::Vec3::new(*x as f32, *y as f32, *z as f32)),
-                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
-                    => Some(na::Vec3::new(*x as f32, *y as f32, 0.0)),
+            .filter_map(|cmp| match (state.get_as_number(&cmp, "x"), state.get_as_number(&cmp, "y"), state.get_as_number(&cmp, "z")) {
+                (Some(x), Some(y), Some(z))
+                    => Some(na::Vec3::new(x as f32, y as f32, z as f32)),
+                (Some(x), Some(y), _)
+                    => Some(na::Vec3::new(x as f32, y as f32, 0.0)),
                 _ => None
             })
 
@@ -133,11 +133,11 @@ impl PhysicsSystem {
             .filter(|c| match state.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "movement", _ => false })
 
             // build a vector from each of the component
-            .filter_map(|cmp| match (state.get(&cmp, "x"), state.get(&cmp, "y"), state.get(&cmp, "z")) {
-                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), Ok(&::entities::Number(ref z)))
-                    => Some(na::Vec3::new(*x as f32, *y as f32, *z as f32)),
-                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
-                    => Some(na::Vec3::new(*x as f32, *y as f32, 0.0)),
+            .filter_map(|cmp| match (state.get_as_number(&cmp, "x"), state.get_as_number(&cmp, "y"), state.get_as_number(&cmp, "z")) {
+                (Some(x), Some(y), Some(z))
+                    => Some(na::Vec3::new(x as f32, y as f32, z as f32)),
+                (Some(x), Some(y), _)
+                    => Some(na::Vec3::new(x as f32, y as f32, 0.0)),
                 _ => None
             })
 
@@ -159,9 +159,9 @@ impl PhysicsSystem {
 			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "requestedMovement", _ => false })
 
 			// build a vector from each of the component
-			.filter_map(|cmp| match (state.get(cmp, "x"), state.get(cmp, "y"), state.get(cmp, "z")) {
-				(Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
-					=> Some(Vec2::new(*x as f32, *y as f32)),
+			.filter_map(|cmp| match (state.get_as_number(cmp, "x"), state.get_as_number(cmp, "y"), state.get_as_number(cmp, "z")) {
+				(Some(x), Some(y), _)
+					=> Some(Vec2::new(x as f32, y as f32)),
 				_ => None
 			})
 

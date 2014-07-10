@@ -124,8 +124,8 @@ impl CustomDisplaySystem {
 
 		// updating everything
 		for (component, element) in self.elements.mut_iter() {
-			let vertexShader = match state.get(component, "vertexShader") { Ok(&::entities::String(ref s)) => s.to_string(), _ => continue };
-			let fragmentShader = match state.get(component, "fragmentShader") { Ok(&::entities::String(ref s)) => s.to_string(), _ => continue };
+			let vertexShader = match state.get_as_string(component, "vertexShader") { Some(s) => s, _ => continue };
+			let fragmentShader = match state.get_as_string(component, "fragmentShader") { Some(s) => s, _ => continue };
 
 			let mut recompilePrograms = false;
 
