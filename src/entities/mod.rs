@@ -5,7 +5,6 @@ pub use self::state::{ ComponentType, NativeComponentType, EntityComponentType }
 pub use self::state::{ StateError };
 
 use rust_hl_lua::any;
-use nalgebra::na;
 
 pub mod loader;
 mod state;
@@ -121,57 +120,4 @@ pub trait EntitiesHelper {
             _ => None
         }
     }
-
-    /// returns the position of an entity
-    fn get_entity_position(&self, id: &EntityID)
-        -> na::Vec3<f32>
-    {
-        self
-            .get_components_list().move_iter()
-
-            // take only the components owned by the entity
-            .filter(|c| self.get_owner(c).unwrap() == *id)
-
-            // take only the "position" components
-            .filter(|c| match self.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "position", _ => false })
-
-            // build a vector from each of the component
-            .filter_map(|cmp| match (self.get(&cmp, "x"), self.get(&cmp, "y"), self.get(&cmp, "z")) {
-                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), Ok(&::entities::Number(ref z)))
-                    => Some(na::Vec3::new(*x as f32, *y as f32, *z as f32)),
-                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
-                    => Some(na::Vec3::new(*x as f32, *y as f32, 0.0)),
-                _ => None
-            })
-
-            // add all the elements together
-            .fold(na::Vec3::new(0.0, 0.0, 0.0), |vec, a| vec + a)
-    }
-
-    /// returns the total movement of an entity
-    fn get_entity_movement(&self, id: &EntityID)
-        -> na::Vec3<f32>
-    {
-        self
-            .get_components_list().move_iter()
-
-            // take only the components owned by the entity
-            .filter(|c| self.get_owner(c).unwrap() == *id)
-
-            // take only the "position" components
-            .filter(|c| match self.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "movement", _ => false })
-
-            // build a vector from each of the component
-            .filter_map(|cmp| match (self.get(&cmp, "x"), self.get(&cmp, "y"), self.get(&cmp, "z")) {
-                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), Ok(&::entities::Number(ref z)))
-                    => Some(na::Vec3::new(*x as f32, *y as f32, *z as f32)),
-                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
-                    => Some(na::Vec3::new(*x as f32, *y as f32, 0.0)),
-                _ => None
-            })
-
-            // add all the elements together
-            .fold(na::Vec3::new(0.0, 0.0, 0.0), |vec, a| vec + a)
-    }
-
 }

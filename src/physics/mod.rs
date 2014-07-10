@@ -3,7 +3,7 @@ use std::collections::{ HashSet, HashMap };
 use std::cell::RefCell;
 use std::rc::Rc;
 use nalgebra::na;
-use nalgebra::na::{ Norm, Translation, Vec2 };
+use nalgebra::na::{ Norm, Translation, Vec2, Vec3 };
 use ncollide::geom::geom::Geom;
 use nphysics::world::World;
 use nphysics::object::{ RigidBody };
@@ -59,8 +59,8 @@ impl PhysicsSystem {
 				let body = Rc::new(RefCell::new(RigidBody::new_dynamic(shape, 1.0, 0.5, 0.0)));
 
 				// initializing body with current position and movement
-				body.borrow_mut().set_translation(PhysicsSystem::get_position(state, &e));
-				body.borrow_mut().set_lin_vel(PhysicsSystem::get_movement(state, &e));
+				body.borrow_mut().set_translation({ let p = PhysicsSystem::get_entity_position(state, &e); na::Vec2::new(p.x,p.y) });
+				body.borrow_mut().set_lin_vel({ let p = PhysicsSystem::get_entity_movement(state, &e); na::Vec2::new(p.x,p.y) });
 
 				self.bodies.insert(e.clone(), body.clone());
 				self.world.add_body(body.clone());
@@ -69,8 +69,8 @@ impl PhysicsSystem {
 
 		// setting all positions and movements
 		for (entity, body) in self.bodies.iter() {
-			let position = PhysicsSystem::get_position(state, entity);
-			let movement = PhysicsSystem::get_movement(state, entity);
+			let position = { let p = PhysicsSystem::get_entity_position(state, entity); na::Vec2::new(p.x,p.y) };
+			let movement = { let p = PhysicsSystem::get_entity_movement(state, entity); na::Vec2::new(p.x,p.y) };
 			let requestedMovement = PhysicsSystem::get_requested_movement(state, entity);
 
 			let mut borrowedBody = body.borrow_mut();
@@ -93,53 +93,57 @@ impl PhysicsSystem {
 		}
 	}
 
-	/// returns the position of an entity
-	fn get_position(state: &EntitiesState, id: &EntityID)
-		-> Vec2<f32>
-	{
-		state
-			.get_components_iter()
+    /// returns the position of an entity
+    pub fn get_entity_position(state: &EntitiesState, id: &EntityID)
+        -> na::Vec3<f32>
+    {
+        state
+            .get_components_list().move_iter()
 
-			// take only the components owned by the entity
-			.filter(|c| state.get_owner(*c).unwrap() == *id)
+            // take only the components owned by the entity
+            .filter(|c| state.get_owner(c).unwrap() == *id)
 
-			// take only the "position" components
-			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "position", _ => false })
+            // take only the "position" components
+            .filter(|c| match state.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "position", _ => false })
 
-			// build a vector from each of the component
-			.filter_map(|cmp| match (state.get(cmp, "x"), state.get(cmp, "y"), state.get(cmp, "z")) {
-				(Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
-					=> Some(Vec2::new(*x as f32, *y as f32)),
-				_ => None
-			})
+            // build a vector from each of the component
+            .filter_map(|cmp| match (state.get(&cmp, "x"), state.get(&cmp, "y"), state.get(&cmp, "z")) {
+                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), Ok(&::entities::Number(ref z)))
+                    => Some(na::Vec3::new(*x as f32, *y as f32, *z as f32)),
+                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
+                    => Some(na::Vec3::new(*x as f32, *y as f32, 0.0)),
+                _ => None
+            })
 
-			// add all the elements together
-			.fold(Vec2::new(0.0, 0.0), |vec, a| vec + a)
-	}
+            // add all the elements together
+            .fold(na::Vec3::new(0.0, 0.0, 0.0), |vec, a| vec + a)
+    }
 
-	/// returns the total movement of an entity
-	fn get_movement(state: &EntitiesState, id: &EntityID)
-		-> Vec2<f32>
-	{
-		state
-			.get_components_iter()
+    /// Returns the total movement of an entity.
+    pub fn get_entity_movement(state: &EntitiesState, id: &EntityID)
+        -> na::Vec3<f32>
+    {
+        state
+            .get_components_list().move_iter()
 
-			// take only the components owned by the entity
-			.filter(|c| state.get_owner(*c).unwrap() == *id)
+            // take only the components owned by the entity
+            .filter(|c| state.get_owner(c).unwrap() == *id)
 
-			// take only the "position" components
-			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "movement", _ => false })
+            // take only the "position" components
+            .filter(|c| match state.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "movement", _ => false })
 
-			// build a vector from each of the component
-			.filter_map(|cmp| match (state.get(cmp, "x"), state.get(cmp, "y"), state.get(cmp, "z")) {
-				(Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
-					=> Some(Vec2::new(*x as f32, *y as f32)),
-				_ => None
-			})
+            // build a vector from each of the component
+            .filter_map(|cmp| match (state.get(&cmp, "x"), state.get(&cmp, "y"), state.get(&cmp, "z")) {
+                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), Ok(&::entities::Number(ref z)))
+                    => Some(na::Vec3::new(*x as f32, *y as f32, *z as f32)),
+                (Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
+                    => Some(na::Vec3::new(*x as f32, *y as f32, 0.0)),
+                _ => None
+            })
 
-			// add all the elements together
-			.fold(Vec2::new(0.0, 0.0), |vec, a| vec + a)
-	}
+            // add all the elements together
+            .fold(na::Vec3::new(0.0, 0.0, 0.0), |vec, a| vec + a)
+    }
 
 	/// returns the total requested movement of an entity
 	fn get_requested_movement(state: &EntitiesState, id: &EntityID)

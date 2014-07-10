@@ -49,7 +49,7 @@ impl CustomDisplaySystem {
 		});
 
 	 	for (cmp, element) in self.elements.mut_iter() {
-	 		let pos = super::DisplaySystem::get_position(state, &state.get_owner(cmp).unwrap());
+	 		let pos = ::physics::PhysicsSystem::get_entity_position(state, &state.get_owner(cmp).unwrap());
 	 		let translationMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, pos.x, pos.y, pos.z, 1.0);
 	 		let finalMatrix = translationMatrix * camera;
 

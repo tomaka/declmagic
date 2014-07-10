@@ -39,7 +39,7 @@ impl DisplaySystem {
 		});
 
 	 	for (cmp, &(ref sprite, _)) in self.sprites.iter() {
-	 		let pos = DisplaySystem::get_position(state, &state.get_owner(cmp).unwrap());
+	 		let pos = ::physics::PhysicsSystem::get_entity_position(state, &state.get_owner(cmp).unwrap());
 	 		let translationMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, pos.x, pos.y, pos.z, 1.0);
 			sprite.as_ref().map(|e| e.draw(&(translationMatrix * camera)));
 		}
@@ -101,7 +101,7 @@ impl DisplaySystem {
 		}
 	}
 
-	/// Returns the camera matrix of the scene
+	/// Returns the camera matrix of the scene.
 	pub fn get_camera(state: &EntitiesState)
 		-> Option<Mat4<f32>>
 	{
@@ -120,38 +120,9 @@ impl DisplaySystem {
 		let (cameraComponent, matrixData) = cameraInfos.unwrap();
 		let matrix = Mat4::new(*matrixData.get(0), *matrixData.get(1), *matrixData.get(2), *matrixData.get(3), *matrixData.get(4), *matrixData.get(5), *matrixData.get(6), *matrixData.get(7), *matrixData.get(8), *matrixData.get(9), *matrixData.get(10), *matrixData.get(11), *matrixData.get(12), *matrixData.get(13), *matrixData.get(14), *matrixData.get(15));
 
-		let position = DisplaySystem::get_position(state, &state.get_owner(cameraComponent).unwrap());
+		let position = ::physics::PhysicsSystem::get_entity_position(state, &state.get_owner(cameraComponent).unwrap());
 		let positionMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -position.x, -position.y, -position.z, 1.0);
 
 		Some(positionMatrix * matrix)
-	}
-
-	/// returns the position of an entity
-	fn get_position(state: &EntitiesState, id: &EntityID)
-		-> Vec3<f32>
-	{
-		state
-			.get_components_iter()
-
-			// filter out non-visible components
-			.filter(|c| state.is_component_visible(*c).unwrap())
-
-			// take only the components owned by the entity
-			.filter(|c| state.get_owner(*c).unwrap() == *id)
-
-			// take only the "position" components
-			.filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "position", _ => false })
-
-			// build a vector from each of the component
-			.filter_map(|cmp| match (state.get(cmp, "x"), state.get(cmp, "y"), state.get(cmp, "z")) {
-				(Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), Ok(&::entities::Number(ref z)))
-					=> Some(Vec3::new(*x as f32, *y as f32, *z as f32)),
-				(Ok(&::entities::Number(ref x)), Ok(&::entities::Number(ref y)), _)
-					=> Some(Vec3::new(*x as f32, *y as f32, 0.0)),
-				_ => None
-			})
-
-			// add all the elements together
-			.fold(Vec3::new(0.0, 0.0, 0.0), |vec, a| vec + a)
 	}
 }

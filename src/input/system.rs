@@ -88,7 +88,7 @@ impl InputSystem {
             .filter(|c| state.is_component_visible(*c).unwrap())
             .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "clickBox", _ => false })
             .filter_map(|component| {
-                let entity_position = state.get_entity_position(&match state.get_owner(component) { Ok(t) => t, _ => return None });
+                let entity_position = ::physics::PhysicsSystem::get_entity_position(state, &match state.get_owner(component) { Ok(t) => t, _ => return None });
 
                 let coord1 = match (state.get_as_number(component, "leftX"), state.get_as_number(component, "bottomY"))
                 {
