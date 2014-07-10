@@ -92,10 +92,10 @@ impl DisplaySystem {
 			match sprite {
 				&Some(ref mut s) =>
 					s.set_rectangle_coords(
-						match state.get(component, "leftX") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
-						match state.get(component, "topY") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
-						match state.get(component, "rightX") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None },
-						match state.get(component, "bottomY") { Ok(&::entities::Number(ref nb)) => Some(*nb as f32), _ => None }
+						state.get_as_number(component, "leftX").map(|n| n as f32),
+						state.get_as_number(component, "topY").map(|n| n as f32),
+						state.get_as_number(component, "rightX").map(|n| n as f32),
+						state.get_as_number(component, "bottomY").map(|n| n as f32)
 					),
 				_ => fail!()
 			}
