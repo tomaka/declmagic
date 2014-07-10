@@ -9,7 +9,7 @@ build = "make"
 [[lib]]
 name = "declmagic"
 
-[dependencies.rust_hl_lua]
+[dependencies.rust-hl-lua]
 git = "https://github.com/Tomaka17/rust-hl-lua"
 
 #[dependencies.gl]

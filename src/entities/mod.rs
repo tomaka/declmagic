@@ -4,7 +4,7 @@ pub use self::state::{ EntitiesState, Data, EntityID, ComponentID, Number, Strin
 pub use self::state::{ ComponentType, NativeComponentType, EntityComponentType };
 pub use self::state::{ StateError };
 
-use rust_hl_lua::any;
+use lua::any;
 
 pub mod loader;
 mod state;

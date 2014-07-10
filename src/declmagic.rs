@@ -10,7 +10,7 @@ extern crate glob;
 extern crate nalgebra;
 extern crate ncollide = "ncollide2df32";
 extern crate nphysics = "nphysics2df32";
-extern crate rust_hl_lua;
+extern crate lua = "rust-hl-lua";
 extern crate serialize;
 extern crate stb_image;
 extern crate sync;
