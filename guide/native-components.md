@@ -80,6 +80,47 @@ If some of the coordinates are not specified, they will be automatically determi
 
 ## Input
 
+### clickBox
+
+**(not implemented)**
+
+Adds a box where this entity will interact with the mouse.
+
+```rust
+{
+	"type": "clickBox",
+	"data": {
+		"topY": <number>,
+		"leftX": <number)>,
+		"bottomY": <number>,
+		"rightX": <number>
+	}
+}
+```
+
+The coordinates are added to the entity's position.
+
+### hoverHandler
+
+**(not implemented)**
+
+Handles the user's mouse hovering the entity.
+
+```rust
+{
+	"type": "hoverHandler",
+	"data": {
+		"scriptOnEnter": <string (optional)>,
+		"scriptOnLeave": <string (optional)>,
+		"prototype": <entity (optional)>
+	}
+}
+```
+
+ - `scriptOnEnter`: script to execute when the mouse starts hovering the element
+ - `scriptOnLeave`: script to execute when the mouse leaves the clickbox or starts hovering another element
+ - `prototype`: entity to inherit from when the element is being hovered
+
 ### inputHandler
 
 Allows handling of a user input.
@@ -94,7 +135,6 @@ Allows handling of a user input.
 	}
 }
 ```
-
 
  - `element`: name of the element that is to be handled (eg. "A", "B", "Button0", etc.)
  - `script`: script to execute every time the element is pressed, released or moved

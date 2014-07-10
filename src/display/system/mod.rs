@@ -101,8 +101,8 @@ impl DisplaySystem {
 		}
 	}
 
-	/// returns the camera matrix of the scene
-	fn get_camera(state: &EntitiesState)
+	/// Returns the camera matrix of the scene
+	pub fn get_camera(state: &EntitiesState)
 		-> Option<Mat4<f32>>
 	{
 		let cameraInfos = state

@@ -1,9 +1,11 @@
 use super::{ Message, Element, Pressed, Released };
 use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComponentType };
+use nalgebra::na;
 use script;
 
 pub struct InputSystem {
-    logger: Box<::log::Logger>
+    logger: Box<::log::Logger>,
+    current_hover: Option<EntityID>
 }
 
 impl InputSystem {
@@ -11,12 +13,15 @@ impl InputSystem {
         -> InputSystem
     {
         InputSystem {
-            logger: box logger
+            logger: box logger,
+            current_hover: None
         }
     }
 
-    pub fn process(&mut self, state: &mut EntitiesState, _: &u64, messages: &[Message])
+    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &u64, messages: &[Message])
     {
+        self.process_hover(state, elapsed, messages);
+
         let mut filteredMessagesIter = messages.iter().filter_map(|msg| match msg {
                                                                             &Pressed(ref e) => Some((e.clone(), true)),
                                                                             &Released(ref e) => Some((e.clone(), false)),
@@ -74,5 +79,57 @@ impl InputSystem {
                 }
             }
         }
+    }
+
+    fn process_hover(&mut self, state: &mut EntitiesState, _: &u64, messages: &[Message])
+    {
+        let hovered_entity: Option<EntityID> = state
+            .get_components_iter()
+            .filter(|c| state.is_component_visible(*c).unwrap())
+            .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "clickBox", _ => false })
+            .filter_map(|component| {
+                let entity_position = state.get_entity_position(&match state.get_owner(component) { Ok(t) => t, _ => return None });
+
+                let coord1 = match (state.get_as_number(component, "leftX"), state.get_as_number(component, "bottomY"))
+                {
+                    (Some(x), Some(y)) => na::Vec2::new(x as f32 + entity_position.x, y as f32 + entity_position.y),
+                    _ => return None
+                };
+
+                let coord2 = match (state.get_as_number(component, "rightX"), state.get_as_number(component, "topY"))
+                {
+                    (Some(x), Some(y)) => na::Vec2::new(x as f32 + entity_position.x, y as f32 + entity_position.y),
+                    _ => return None
+                };
+
+                // TODO: 
+                None
+            })
+            .next();
+
+        // we have left the current hovered entity, executing script and removing prototype
+        if self.current_hover.is_some() && hovered_entity != self.current_hover {
+            // looping through each "hoverHandler" of the current_hover entity
+            for cmp in state
+                .get_components_iter()
+                .filter(|c| state.is_component_visible(*c).unwrap())
+                .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "hoverHandler", _ => false })
+                .filter(|c| state.get_owner(*c).ok() == self.current_hover)
+                .map(|c| c.clone())
+                .collect::<Vec<ComponentID>>().move_iter()
+            {
+                // removing all its children (ie. the prototype)
+                for c in state.get_component_children(&cmp).unwrap().move_iter() {
+                    state.destroy_component(&c).ok();
+                }
+
+                // executing onLeave script
+                match state.get_as_string(&cmp, "scriptOnLeave") {
+                    None => (),
+                    Some(script) => { script::execute_mut(state, &cmp, &script.as_slice()).unwrap(); }
+                };
+            }
+        }
+
     }
 }
