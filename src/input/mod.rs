@@ -177,5 +177,6 @@ pub enum Element {
 pub enum Message {
     Pressed(Element),
     Released(Element),
-    Text(char)
+    Text(char),
+    MouseMoved(f64, f64)        // x and y coords between -1 and 1
 }

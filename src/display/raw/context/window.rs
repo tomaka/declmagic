@@ -183,6 +183,17 @@ extern fn closeCallback(window: *const libglfw3::GLFWwindow) {
     sender.send(super::super::Closed);
 }
 
+extern fn cursorPosCallback(window: *const libglfw3::GLFWwindow, x: ::libc::c_double, y: ::libc::c_double) {
+    let mut width: c_int = unsafe { ::std::mem::uninitialized() };
+    let mut height: c_int = unsafe { ::std::mem::uninitialized() };
+    unsafe { libglfw3::glfwGetWindowSize(window, &mut width, &mut height) };
+
+    let sender : &Sender<WindowEvent> = unsafe { transmute(libglfw3::glfwGetWindowUserPointer(window)) };
+    let x = (2.0 * x / (width as f64)) - 1.0;
+    let y = (2.0 * (1.0 - (y / (height as f64)))) - 1.0;
+    sender.send(super::super::Input(::input::MouseMoved(x as f64, y as f64)));
+}
+
 impl Window {
     pub fn new(width: uint, height: uint, title: &str) -> Window {
         unsafe {
@@ -222,6 +233,7 @@ impl Window {
                 libglfw3::glfwSetWindowPosCallback(handle, Some(posCallback));
                 libglfw3::glfwSetWindowSizeCallback(handle, Some(sizeCallback));
                 libglfw3::glfwSetWindowCloseCallback(handle, Some(closeCallback));
+                libglfw3::glfwSetCursorPosCallback(handle, Some(cursorPosCallback));
 
                 handle
             })
@@ -263,5 +275,14 @@ impl Window {
         self.commands.exec(proc() {
             unsafe { libglfw3::glfwMakeContextCurrent(handle) }
         }).get();
+    }
+
+    pub fn get_cursor_pos(&self)
+        -> (f64, f64)
+    {
+        let mut x: ::libc::c_double = unsafe { ::std::mem::uninitialized() };
+        let mut y: ::libc::c_double = unsafe { ::std::mem::uninitialized() };
+        unsafe { libglfw3::glfwGetCursorPos(self.handle, &mut x, &mut y) };
+        (x as f64, y as f64)
     }
 }

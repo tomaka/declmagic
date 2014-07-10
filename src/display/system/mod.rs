@@ -1,6 +1,7 @@
 use super::managed_display::ManagedDisplay;
 use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComponentType };
-use nalgebra::na::{ Mat4, Vec3, Eye };
+use nalgebra::na;
+use nalgebra::na::{ Vec3, Eye };
 use std::collections::{ HashSet, HashMap };
 use std::sync::Arc;
 use super::sprite_displayer::SpriteDisplayer;
@@ -40,7 +41,7 @@ impl DisplaySystem {
 
 	 	for (cmp, &(ref sprite, _)) in self.sprites.iter() {
 	 		let pos = ::physics::PhysicsSystem::get_entity_position(state, &state.get_owner(cmp).unwrap());
-	 		let translationMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, pos.x, pos.y, pos.z, 1.0);
+	 		let translationMatrix = na::Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, pos.x, pos.y, pos.z, 1.0);
 			sprite.as_ref().map(|e| e.draw(&(translationMatrix * camera)));
 		}
 
@@ -103,7 +104,7 @@ impl DisplaySystem {
 
 	/// Returns the camera matrix of the scene.
 	pub fn get_camera(state: &EntitiesState)
-		-> Option<Mat4<f32>>
+		-> Option<na::Mat4<f32>>
 	{
 		let cameraInfos = state
 			.get_components_iter()
@@ -118,10 +119,10 @@ impl DisplaySystem {
 		}
 
 		let (cameraComponent, matrixData) = cameraInfos.unwrap();
-		let matrix = Mat4::new(*matrixData.get(0), *matrixData.get(1), *matrixData.get(2), *matrixData.get(3), *matrixData.get(4), *matrixData.get(5), *matrixData.get(6), *matrixData.get(7), *matrixData.get(8), *matrixData.get(9), *matrixData.get(10), *matrixData.get(11), *matrixData.get(12), *matrixData.get(13), *matrixData.get(14), *matrixData.get(15));
+		let matrix = na::Mat4::new(*matrixData.get(0), *matrixData.get(1), *matrixData.get(2), *matrixData.get(3), *matrixData.get(4), *matrixData.get(5), *matrixData.get(6), *matrixData.get(7), *matrixData.get(8), *matrixData.get(9), *matrixData.get(10), *matrixData.get(11), *matrixData.get(12), *matrixData.get(13), *matrixData.get(14), *matrixData.get(15));
 
 		let position = ::physics::PhysicsSystem::get_entity_position(state, &state.get_owner(cameraComponent).unwrap());
-		let positionMatrix = Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -position.x, -position.y, -position.z, 1.0);
+		let positionMatrix = na::Mat4::new(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -position.x, -position.y, -position.z, 1.0);
 
 		Some(positionMatrix * matrix)
 	}

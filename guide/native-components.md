@@ -82,8 +82,6 @@ If some of the coordinates are not specified, they will be automatically determi
 
 ### clickBox
 
-**(not implemented)**
-
 Adds a box where this entity will interact with the mouse.
 
 ```rust
@@ -101,8 +99,6 @@ Adds a box where this entity will interact with the mouse.
 The coordinates are added to the entity's position.
 
 ### hoverHandler
-
-**(not implemented)**
 
 Handles the user's mouse hovering the entity.
 

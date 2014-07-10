@@ -1,11 +1,13 @@
-use super::{ Message, Element, Pressed, Released };
+use super::{ Message, Element, Pressed, Released, MouseMoved };
 use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComponentType };
 use nalgebra::na;
+use nalgebra::na::Inv;
 use script;
 
 pub struct InputSystem {
     logger: Box<::log::Logger>,
-    current_hover: Option<EntityID>
+    current_hover: Option<EntityID>,
+    last_known_mouse_position: na::Vec2<f64>
 }
 
 impl InputSystem {
@@ -14,7 +16,8 @@ impl InputSystem {
     {
         InputSystem {
             logger: box logger,
-            current_hover: None
+            current_hover: None,
+            last_known_mouse_position: na::Vec2::new(0.0, 0.0)
         }
     }
 
@@ -83,12 +86,32 @@ impl InputSystem {
 
     fn process_hover(&mut self, state: &mut EntitiesState, _: &u64, messages: &[Message])
     {
+        // getting the mouse position between (-1, -1) and (1, 1)
+        let mouse_position = messages
+            .iter().rev()
+            .filter_map(|msg| match msg {
+                &MouseMoved(x, y) => Some(na::Vec2::new(x, y)),
+                _ => None
+            })
+            .next().unwrap_or(self.last_known_mouse_position);
+        self.last_known_mouse_position = mouse_position;
+
+        // getting the mouse position in camera units
+        let mouse_position = {
+            let mousePosVector = na::Vec4::new(mouse_position.x as f32, mouse_position.y as f32, 0.0, 1.0);
+            let matrix = { let mut m = ::display::DisplaySystem::get_camera(state).unwrap(); m.inv(); m };
+            let result = mousePosVector * matrix;
+            na::Vec2::new(result.x / result.w, result.y / result.w)
+        };
+
+        // getting which entity is being hovered
         let hovered_entity: Option<EntityID> = state
             .get_components_iter()
             .filter(|c| state.is_component_visible(*c).unwrap())
             .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "clickBox", _ => false })
             .filter_map(|component| {
-                let entity_position = ::physics::PhysicsSystem::get_entity_position(state, &match state.get_owner(component) { Ok(t) => t, _ => return None });
+                let entity = match state.get_owner(component) { Ok(t) => t, _ => return None };
+                let entity_position = ::physics::PhysicsSystem::get_entity_position(state, &entity);
 
                 let coord1 = match (state.get_as_number(component, "leftX"), state.get_as_number(component, "bottomY"))
                 {
@@ -102,13 +125,26 @@ impl InputSystem {
                     _ => return None
                 };
 
-                // TODO: 
-                None
+                if (coord1.x < coord2.x) && coord2.x < mouse_position.x { return None }
+                if (coord2.x < coord1.x) && coord1.x < mouse_position.x { return None }
+                if (coord1.x > coord2.x) && coord2.x > mouse_position.x { return None }
+                if (coord2.x > coord1.x) && coord1.x > mouse_position.x { return None }
+                if (coord1.y < coord2.y) && coord2.y < mouse_position.y { return None }
+                if (coord2.y < coord1.y) && coord1.y < mouse_position.y { return None }
+                if (coord1.y > coord2.y) && coord2.y > mouse_position.y { return None }
+                if (coord2.y > coord1.y) && coord1.y > mouse_position.y { return None }
+
+                Some(entity)
             })
             .next();
 
+        // if the hovered entity has not changed, we have finished
+        if hovered_entity == self.current_hover {
+            return
+        }
+
         // we have left the current hovered entity, executing script and removing prototype
-        if self.current_hover.is_some() && hovered_entity != self.current_hover {
+        if self.current_hover.is_some() {
             // looping through each "hoverHandler" of the current_hover entity
             for cmp in state
                 .get_components_iter()
@@ -131,5 +167,38 @@ impl InputSystem {
             }
         }
 
+        // updating self
+        self.current_hover = hovered_entity;
+
+        // processing the new entity
+        match hovered_entity {
+            None => (),
+            Some(hovered_entity) => {
+                // looping through each "hoverHandler" of the new entity
+                for cmp in state
+                    .get_components_iter()
+                    .filter(|c| state.is_component_visible(*c).unwrap())
+                    .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "hoverHandler", _ => false })
+                    .filter(|c| state.get_owner(*c).ok() == Some(hovered_entity))
+                    .map(|c| c.clone())
+                    .collect::<Vec<ComponentID>>().move_iter()
+                {
+                    // adding prototype
+                    match state.get_as_entity(&cmp, "prototype") {
+                        Some(prototype) => {
+                            let newCmp = state.create_component_from_entity(&hovered_entity, &prototype, ::std::collections::HashMap::new()).unwrap();
+                            state.set_component_parent(&newCmp, &cmp);
+                        },
+                        None => ()
+                    };
+
+                    // executing onLeave script
+                    match state.get_as_string(&cmp, "scriptOnEnter") {
+                        None => (),
+                        Some(script) => { script::execute_mut(state, &cmp, &script.as_slice()).unwrap(); }
+                    };
+                }
+            }
+        }
     }
 }
