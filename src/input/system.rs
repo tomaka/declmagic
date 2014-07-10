@@ -38,7 +38,7 @@ impl InputSystem {
 
                                 .collect::<Vec<(ComponentID, String)>>().move_iter()
             {
-                script::execute(state, &component, &script.as_slice()).unwrap()
+                script::execute_mut(state, &component, &script.as_slice()).unwrap();
             }
 
             for (component, entity) in state

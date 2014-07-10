@@ -1,8 +1,9 @@
-use entities::{ EntitiesState, EntityID, ComponentID };
+use entities::{ EntitiesHelper, EntitiesState, EntityID, ComponentID };
 use rust_hl_lua::{ Lua, LuaError };
+use rust_hl_lua::any;
 
-pub fn execute_mut<S: ::std::str::Str + ::std::fmt::Show>(entities: &mut EntitiesState, component: &ComponentID, code: &S)
-	-> Result<(), LuaError>
+pub fn execute_mut<E: EntitiesHelper, S: ::std::str::Str + ::std::fmt::Show>(entities: &mut E, component: &ComponentID, code: &S)
+	-> Result<any::AnyLuaValue, LuaError>
 {
 	let mut lua = Lua::new();
 
@@ -13,8 +14,8 @@ pub fn execute_mut<S: ::std::str::Str + ::std::fmt::Show>(entities: &mut Entitie
 	lua.execute(code.as_slice())
 }
 
-pub fn execute<S: ::std::str::Str + ::std::fmt::Show>(entities: &EntitiesState, component: &ComponentID, code: &S)
-	-> Result<(), LuaError>
+pub fn execute<E: EntitiesHelper, S: ::std::str::Str + ::std::fmt::Show>(entities: &E, component: &ComponentID, code: &S)
+	-> Result<any::AnyLuaValue, LuaError>
 {
 	let mut lua = Lua::new();
 

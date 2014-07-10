@@ -219,8 +219,6 @@ Defines a custom property.
 
 ### propertyView
 
-**(not implemented)**
-
 Defines a custom property whose value is an alias of something else.
 
 ```rust

@@ -4,6 +4,8 @@ pub use self::state::{ EntitiesState, Data, EntityID, ComponentID, Number, Strin
 pub use self::state::{ ComponentType, NativeComponentType, EntityComponentType };
 pub use self::state::{ StateError };
 
+use rust_hl_lua::any;
+
 pub mod loader;
 mod state;
 
@@ -51,9 +53,14 @@ pub trait EntitiesHelper {
                     "property" =>
                         match self.get(&c, "value") { Ok(&FromProperty(_)) => None, Ok(n) => Some(n.clone()), _ => None },
                     "propertyView" => {
-                        let script = match self.get(&c, "value") { Ok(&FromProperty(_)) => return None, Ok(n) => n.clone(), _ => return None };
-                        //::script::execute(self, c, script);
-                        unimplemented!()
+                        let script = match self.get(&c, "script") { Ok(&FromProperty(_)) => return None, Ok(&String(ref n)) => n.clone(), _ => return None };
+                        match ::script::execute(self, &c, &script) {
+                            Ok(any::Number(val)) => Some(Number(val)),
+                            Ok(any::String(val)) => Some(String(val)),
+                            Ok(any::Boolean(val)) => Some(Boolean(val)),
+                            Ok(_) => unimplemented!(),
+                            Err(e) => fail!("{}", e)
+                        }
                     },
                     _ => fail!()
                 }
