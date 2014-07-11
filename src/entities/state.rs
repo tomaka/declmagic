@@ -6,12 +6,14 @@ use std::collections::HashMap;
 /**
  * Identifier of an entity
  */
-pub type EntityID = uint;
+#[deriving(Clone, Show, Hash, PartialEq, PartialOrd, Eq, Ord)]
+pub struct EntityID(uint);
 
 /**
  * Identifier of a component
  */
-pub type ComponentID = uint;
+#[deriving(Clone, Show, Hash, PartialEq, PartialOrd, Eq, Ord)]
+pub struct ComponentID(uint);
 
 /**
  * An error while doing an operation on the state
@@ -101,8 +103,8 @@ impl EntitiesState {
         EntitiesState {
             components: HashMap::new(),
             entities: HashMap::new(),
-            next_component_id: 1,
-            next_entity_id: 1,
+            next_component_id: ComponentID(1),
+            next_entity_id: EntityID(1),
             visible_components_of_native_type: HashMap::new()
         }
     }
@@ -126,7 +128,7 @@ impl EntitiesState {
         };
 
         self.entities.insert(id, entity);
-        self.next_entity_id += 1;
+        match &mut self.next_entity_id { &EntityID(ref mut id) => (*id) += 1 };
         id
     }
 
@@ -188,7 +190,7 @@ impl EntitiesState {
         self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
 
         self.components.insert(newID, newComponent);
-        self.next_component_id = self.next_component_id + 1;
+        match &mut self.next_component_id { &ComponentID(ref mut id) => (*id) += 1 };
 
         if self.is_entity_visible(owner).unwrap() {
             self.visible_components_of_native_type.insert_or_update_with(typename.to_string(), vec!(newID), |k,v| v.push(newID));
@@ -228,7 +230,7 @@ impl EntitiesState {
         let components_to_inherit: Vec<ComponentID> = self.get_entity_by_id(typename).unwrap().components.iter().map(|c| c.clone()).collect();
 
         self.components.insert(newID, newComponent);
-        self.next_component_id = self.next_component_id + 1;
+        match &mut self.next_component_id { &ComponentID(ref mut id) => (*id) += 1 };
 
         // inheriting components
         for cmp in components_to_inherit.move_iter() {
@@ -441,7 +443,7 @@ impl EntitiesState {
 
         self.components.insert(newID, newComponent);
 
-        self.next_component_id = self.next_component_id + 1;
+        match &mut self.next_component_id { &ComponentID(ref mut id) => (*id) += 1 };
 
         // recursively inheriting if necessary
         match self.get_component_by_id(inherit).unwrap().cmp_type.clone() {
@@ -466,7 +468,7 @@ impl EntitiesState {
         Ok(newID)
     }
 
-    fn get_entity_by_id<'a>(&'a self, id: &ComponentID)
+    fn get_entity_by_id<'a>(&'a self, id: &EntityID)
         -> Result<&'a EntityData, StateError>
     {
         match self.entities.find(id) {
@@ -475,7 +477,7 @@ impl EntitiesState {
         }
     }
 
-    fn get_entity_by_id_mut<'a>(&'a mut self, id: &ComponentID)
+    fn get_entity_by_id_mut<'a>(&'a mut self, id: &EntityID)
         -> Result<&'a mut EntityData, StateError>
     {
         match self.entities.find_mut(id) {
