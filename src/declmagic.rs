@@ -33,7 +33,7 @@ mod script;
 mod threaded_executer;
 
 pub trait GameSystem {
-	fn process(&mut self, state: &mut entities::EntitiesState, elapsed: &u64);
+	fn process(&mut self, state: &mut entities::EntitiesState, elapsed: &f64);
 }
 
 pub struct Game {
@@ -88,8 +88,8 @@ impl Game {
 
 	pub fn exec(mut self) {
 		let mut timer = ::std::io::timer::Timer::new().unwrap();
-		let period = 1000 / 60;
-		let timerPeriod = timer.periodic(period);
+		let period: f64 = 1.0 / 60.0;
+		let timerPeriod = timer.periodic((period * 1000.0) as u64);
 
 		'mainLoop: loop {
 			let mut inputMessages = Vec::new();

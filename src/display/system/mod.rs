@@ -30,7 +30,7 @@ impl DisplaySystem {
 		}
 	}
 
-	pub fn draw(&mut self, state: &EntitiesState, _: &u64)
+	pub fn draw(&mut self, state: &EntitiesState, _: &f64)
 	{
 		self.update_sprite_displayers(state);
 

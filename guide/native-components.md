@@ -294,6 +294,33 @@ Script to execute when the value of a property is in a certain range.
 }
 ```
 
+### spawner
+
+Spawns entities.
+
+```rust
+{
+	"type": "spawner",
+	"data": {
+		"nextSpawn": <number>,
+		"interval": <number>,
+		"limit": <number (optional)>,
+		"prototype": <entity (optional)>,
+		"detach": <boolean (optional, default false)>,
+		"destroyAfterExpiration": <boolean (option, default true)>
+	}
+}
+```
+
+**note: detach false is not supported, currently it is only true**
+
+- `nextSpawn`: time in seconds until the next entity is spawned
+- `interval`: time between two spawns
+- `limit`: number of entities to spawn (default: infinite)
+- `prototype`: prototype that the new entities will inherit from
+- `detach`: if true, the new entities will be detached from the spawner ; if false, the new entities will be destroyed if the spawner is destroyed
+- `destroyAfterExpiration`: if true, the spawner component will be destroyed after the limit reaches 0
+
 ### timeModifier
 
 **(not implemented)**

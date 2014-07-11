@@ -32,7 +32,7 @@ impl PhysicsSystem {
 		}
 	}
 
-	pub fn process(&mut self, state: &mut EntitiesState, elapsed: &u64)
+	pub fn process(&mut self, state: &mut EntitiesState, elapsed: &f64)
 	{
 		// getting the list of all entities that have physics activated
 		let listOfEntities: HashSet<EntityID> = state.get_components_iter()
@@ -84,7 +84,7 @@ impl PhysicsSystem {
 		}
 
 		// step
-		self.world.step((*elapsed as f32) / 1000.0);
+		self.world.step(*elapsed as f32);
 
 		//
 		for (entity, body) in self.bodies.iter() {

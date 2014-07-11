@@ -21,7 +21,7 @@ impl InputSystem {
         }
     }
 
-    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &u64, messages: &[Message])
+    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &f64, messages: &[Message])
     {
         self.process_hover(state, elapsed, messages);
 
@@ -83,7 +83,7 @@ impl InputSystem {
         }
     }
 
-    fn process_hover(&mut self, state: &mut EntitiesState, _: &u64, messages: &[Message])
+    fn process_hover(&mut self, state: &mut EntitiesState, _: &f64, messages: &[Message])
     {
         // getting the mouse position between (-1, -1) and (1, 1)
         let mouse_position = messages
