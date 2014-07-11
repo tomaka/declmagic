@@ -94,6 +94,36 @@ pub enum Data {
     Empty
 }
 
+impl Data {
+    pub fn as_number<'a>(&'a self) -> Option<&'a f64> {
+        match self {
+            &Number(ref val) => Some(val),
+            _ => None
+        }
+    }
+
+    pub fn as_string<'a>(&'a self) -> Option<&'a String> {
+        match self {
+            &String(ref val) => Some(val),
+            _ => None
+        }
+    }
+
+    pub fn as_bool<'a>(&'a self) -> Option<&'a bool> {
+        match self {
+            &Boolean(ref val) => Some(val),
+            _ => None
+        }
+    }
+
+    pub fn as_entity<'a>(&'a self) -> Option<&'a EntityID> {
+        match self {
+            &Entity(ref val) => Some(val),
+            _ => None
+        }
+    }
+}
+
 impl EntitiesState {
     /**
      * Builds a new empty state
