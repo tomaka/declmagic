@@ -84,6 +84,7 @@ impl DisplaySystem {
 
 			if sprite.is_none() || currTexName.as_slice() != textureName.as_slice() {
 				(*sprite) = Some(SpriteDisplayer::new(self.display.clone(), textureName.as_slice()).unwrap());
+				*currTexName = textureName;
 			}
 
 			// getting coordinates
