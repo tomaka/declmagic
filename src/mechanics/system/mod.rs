@@ -30,11 +30,7 @@ impl MechanicsSystem {
     fn update_spawners(&mut self, state: &mut EntitiesState, elapsed: &f64)
     {
         // getting the list of all sprite displayer components
-        let listOfComponents = state.get_components_iter()
-            .filter(|c| state.is_component_visible(*c).unwrap())
-            .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "spawner", _ => false })
-            .map(|c| c.clone())
-            .collect::<Vec<ComponentID>>();
+        let listOfComponents = state.get_visible_native_components("spawner");
 
         for cmp in listOfComponents.move_iter() {
             let mut nextSpawn = match state.get_as_number(&cmp, "nextSpawn") { Some(v) => v, None => continue };

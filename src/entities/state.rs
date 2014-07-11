@@ -34,7 +34,7 @@ pub struct EntitiesState {
     next_component_id: ComponentID,
     next_entity_id: EntityID,
 
-    components_of_native_type: HashMap<String, ComponentID>
+    visible_components_of_native_type: HashMap<String, Vec<ComponentID>>
 }
 
 struct EntityData {
@@ -103,7 +103,7 @@ impl EntitiesState {
             entities: HashMap::new(),
             next_component_id: 1,
             next_entity_id: 1,
-            components_of_native_type: HashMap::new()
+            visible_components_of_native_type: HashMap::new()
         }
     }
 
@@ -190,7 +190,9 @@ impl EntitiesState {
         self.components.insert(newID, newComponent);
         self.next_component_id = self.next_component_id + 1;
 
-        self.components_of_native_type.insert(typename.to_string(), newID);
+        if self.is_entity_visible(owner).unwrap() {
+            self.visible_components_of_native_type.insert_or_update_with(typename.to_string(), vec!(newID), |k,v| v.push(newID));
+        }
 
         Ok(newID)
     }
@@ -242,15 +244,13 @@ impl EntitiesState {
         Ok(newID)
     }
 
-    /**
-     * Destroys a component
-     */
+    /// Destroys a component
     pub fn destroy_component(&mut self, id: &ComponentID)
         -> Result<(), StateError>
     {
-        let (children, linked, parent) = {
+        let (children, linked, parent, cmp_type) = {
             let cmp = try!(self.get_component_by_id(id));
-            (cmp.children.clone(), cmp.linked_from.clone(), cmp.parent)
+            (cmp.children.clone(), cmp.linked_from.clone(), cmp.parent.clone(), cmp.cmp_type.clone())
         };
 
         if parent.is_some() {
@@ -275,7 +275,13 @@ impl EntitiesState {
             entity.components.remove(pos);
         }
 
-        // TODO: remove from components_of_native_type
+        // removing from visible_components_of_native_type
+        match &cmp_type {
+            &NativeComponentType(ref t) => {
+                self.visible_components_of_native_type.find_mut(t).unwrap().retain(|e| e != id);
+            },
+            _ => ()
+        }
 
         // removing from components list
         self.components.remove(id);
@@ -334,6 +340,13 @@ impl EntitiesState {
         -> Vec<EntityID>
     {
         self.entities.iter().filter(|&(_, ref e)| e.name == Some(name.to_string())).map(|(id, _)| id.clone()).collect()
+    }
+
+    /// Returns true if the entity is visible
+    pub fn is_entity_visible(&self, id: &EntityID)
+        -> Result<bool, StateError>
+    {
+        Ok((try!(self.get_entity_by_id(id))).visible)
     }
 
     /**
@@ -418,6 +431,14 @@ impl EntitiesState {
         self.get_component_by_id_mut(parent).unwrap().children.push(newID);
         self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
 
+        if self.is_entity_visible(owner).unwrap() {
+            match &newComponent.cmp_type {
+                &NativeComponentType(ref typename) =>
+                    { self.visible_components_of_native_type.insert_or_update_with(typename.to_string(), vec!(newID), |k,v| v.push(newID)); },
+                _ => ()
+            };
+        }
+
         self.components.insert(newID, newComponent);
 
         self.next_component_id = self.next_component_id + 1;
@@ -487,6 +508,12 @@ impl EntitiesHelper for EntitiesState {
         -> Vec<ComponentID>
     {
         self.get_components_iter().map(|e| e.clone()).collect()
+    }
+
+    fn get_visible_native_components(&self, nativetype: &str)
+        -> Vec<ComponentID>
+    {
+        self.visible_components_of_native_type.find_equiv(&nativetype).map(|v| v.clone()).unwrap_or_else(|| Vec::new())
     }
 
     fn get_type(&self, id: &ComponentID)

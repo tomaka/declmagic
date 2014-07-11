@@ -35,14 +35,12 @@ impl InputSystem {
             let elementStr = format!("{}", element);
 
             for (component, script) in state
-                                .get_components_iter()
-                                .filter(|c| state.is_component_visible(*c).unwrap())
-                                // take only the "inputHandler" components
-                                .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "inputHandler", _ => false })
+                                .get_visible_native_components("inputHandler")
+                                .move_iter()
                                 // filter if they have the right element
-                                .filter(|c| match state.get_as_string(*c, "element") { Some(s) => s == elementStr, _ => false })
+                                .filter(|c| match state.get_as_string(c, "element") { Some(s) => s == elementStr, _ => false })
                                 // obtain the script and the component id
-                                .filter_map(|c| match state.get_as_string(c, "script") { Some(s) => Some((c.clone(), s)), _ => None })
+                                .filter_map(|c| match state.get_as_string(&c, "script") { Some(s) => Some((c.clone(), s)), _ => None })
 
                                 .collect::<Vec<(ComponentID, String)>>().move_iter()
             {
@@ -50,14 +48,12 @@ impl InputSystem {
             }
 
             for (component, entity) in state
-                                .get_components_iter()
-                                .filter(|c| state.is_component_visible(*c).unwrap())
-                                // take only the "inputHandler" components
-                                .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "inputHandler", _ => false })
+                                .get_visible_native_components("inputHandler")
+                                .move_iter()
                                 // filter if they have the right element
-                                .filter(|c| match state.get_as_string(*c, "element") { Some(s) => s == elementStr, _ => false })
+                                .filter(|c| match state.get_as_string(c, "element") { Some(s) => s == elementStr, _ => false })
                                 // obtain the script and the component id
-                                .filter_map(|c| match state.get_as_entity(c, "prototypeWhilePressed") { Some(id) => Some((c.clone(), id)), _ => None })
+                                .filter_map(|c| match state.get_as_entity(&c, "prototypeWhilePressed") { Some(id) => Some((c.clone(), id)), _ => None })
                                 .collect::<Vec<(ComponentID, EntityID)>>().move_iter()
             {
                 let children = state.get_component_children(&component).unwrap();
@@ -105,20 +101,19 @@ impl InputSystem {
 
         // getting which entity is being hovered
         let hovered_entity: Option<EntityID> = state
-            .get_components_iter()
-            .filter(|c| state.is_component_visible(*c).unwrap())
-            .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "clickBox", _ => false })
+            .get_visible_native_components("clickBox")
+            .move_iter()
             .filter_map(|component| {
-                let entity = match state.get_owner(component) { Ok(t) => t, _ => return None };
+                let entity = match state.get_owner(&component) { Ok(t) => t, _ => return None };
                 let entity_position = ::physics::PhysicsSystem::get_entity_position(state, &entity);
 
-                let coord1 = match (state.get_as_number(component, "leftX"), state.get_as_number(component, "bottomY"))
+                let coord1 = match (state.get_as_number(&component, "leftX"), state.get_as_number(&component, "bottomY"))
                 {
                     (Some(x), Some(y)) => na::Vec2::new(x as f32 + entity_position.x, y as f32 + entity_position.y),
                     _ => return None
                 };
 
-                let coord2 = match (state.get_as_number(component, "rightX"), state.get_as_number(component, "topY"))
+                let coord2 = match (state.get_as_number(&component, "rightX"), state.get_as_number(&component, "topY"))
                 {
                     (Some(x), Some(y)) => na::Vec2::new(x as f32 + entity_position.x, y as f32 + entity_position.y),
                     _ => return None
@@ -175,11 +170,9 @@ impl InputSystem {
             Some(hovered_entity) => {
                 // looping through each "hoverHandler" of the new entity
                 for cmp in state
-                    .get_components_iter()
-                    .filter(|c| state.is_component_visible(*c).unwrap())
-                    .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "hoverHandler", _ => false })
-                    .filter(|c| state.get_owner(*c).ok() == Some(hovered_entity))
-                    .map(|c| c.clone())
+                    .get_visible_native_components("hoverHandler")
+                    .move_iter()
+                    .filter(|c| state.get_owner(c).ok() == Some(hovered_entity))
                     .collect::<Vec<ComponentID>>().move_iter()
                 {
                     // adding prototype

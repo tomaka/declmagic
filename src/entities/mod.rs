@@ -9,22 +9,21 @@ use lua::any;
 pub mod loader;
 mod state;
 
+// TODO: ComponentID, EntityID must be associated types
 pub trait EntitiesHelper {
-    /**
-     * Returns the type of the component
-     */
+    /// Returns the type of the component.
     fn get_type(&self, id: &ComponentID)
         -> Result<ComponentType, StateError>;
 
-    /**
-     * Returns the list of all the components in the state
-     */
+    /// Returns the list of all the components in the state.
     fn get_components_list(&self)
         -> Vec<ComponentID>;
+
+    /// Returns the list of all the components which are visible and are of the requested native type.
+    fn get_visible_native_components(&self, nativetype: &str)
+        -> Vec<ComponentID>;
     
-    /**
-     * Returns the owner of the component
-     */
+    /// Returns the owner of the component.
     fn get_owner(&self, id: &ComponentID)
         -> Result<EntityID, StateError>;
 
