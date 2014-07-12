@@ -3,21 +3,15 @@ extern crate std;
 use super::EntitiesHelper;
 use std::collections::HashMap;
 
-/**
- * Identifier of an entity
- */
+/// Identifier of an entity.
 #[deriving(Clone, Show, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub struct EntityID(uint);
 
-/**
- * Identifier of a component
- */
+/// Identifier of a component.
 #[deriving(Clone, Show, Hash, PartialEq, PartialOrd, Eq, Ord)]
 pub struct ComponentID(uint);
 
-/**
- * An error while doing an operation on the state
- */
+/// An error while doing an operation on the state.
 #[deriving(Show)]
 pub enum StateError {
     EntityNotFound(EntityID),
@@ -25,9 +19,6 @@ pub enum StateError {
     FieldDoesNotExist(ComponentID, String)
 }
 
-/**
- * 
- */
 #[unstable]
 pub struct EntitiesState {
     components: HashMap<ComponentID, Component>,
@@ -74,9 +65,7 @@ enum ComponentData {
     ComponentDataLink(ComponentID)
 }
 
-/**
- * Type of a component
- */
+/// Type of a component
 #[deriving(Clone,Show)]
 pub enum ComponentType {
     NativeComponentType(String),
@@ -125,9 +114,7 @@ impl Data {
 }
 
 impl EntitiesState {
-    /**
-     * Builds a new empty state
-     */
+    /// Builds a new empty state.
     pub fn new() -> EntitiesState
     {
         EntitiesState {
@@ -139,9 +126,7 @@ impl EntitiesState {
         }
     }
 
-    /**
-     * Creates a new empty entity in the state
-     */
+    /// Creates a new empty entity in the state.
     pub fn create_entity(&mut self, name: Option<String>, visible: bool)
         -> EntityID
     {
@@ -162,10 +147,9 @@ impl EntitiesState {
         id
     }
 
-    /**
-     * Destroys an entity
-     * This operation will also destroy all the components owned by this entity and all components whose type is this entity
-     */
+    /// Destroys an entity.
+    ///
+    /// This operation will also destroy all the components owned by this entity and all components whose type is this entity.
     pub fn destroy_entity(&mut self, id: &EntityID)
         -> Result<(), StateError>
     {
@@ -196,9 +180,7 @@ impl EntitiesState {
         self.components.keys()
     }
 
-    /**
-     * Creates a new component of native type
-     */
+    /// Creates a new component of a native type.
     pub fn create_native_component(&mut self, owner: &EntityID, typename: &str, data: HashMap<String, Data>)
         -> Result<ComponentID, StateError>
     {
@@ -229,9 +211,7 @@ impl EntitiesState {
         Ok(newID)
     }
 
-    /**
-     * Creates a new component of an entity type
-     */
+    /// Creates a new component of an entity type.
     pub fn create_component_from_entity(&mut self, owner: &EntityID, typename: &EntityID, data: HashMap<String, Data>)
         -> Result<ComponentID, StateError>
     {
@@ -276,7 +256,7 @@ impl EntitiesState {
         Ok(newID)
     }
 
-    /// Destroys a component
+    /// Destroys a component.
     pub fn destroy_component(&mut self, id: &ComponentID)
         -> Result<(), StateError>
     {
@@ -321,9 +301,7 @@ impl EntitiesState {
         Ok(())
     }
 
-    /**
-     * Modifies an element of a component
-     */
+    /// Modifies an element of a component.
     pub fn set(&mut self, id: &ComponentID, field: &str, data: Data)
         -> Result<(), StateError>
     {
@@ -347,43 +325,35 @@ impl EntitiesState {
         unreachable!();
     }
 
-    /**
-     * Returns an iterator to all the entities in the state
-     */
+    /// Returns an iterator to all the entities in the state.
     pub fn get_entities_iter<'a>(&'a self)
         -> std::collections::hashmap::Keys<'a, EntityID, EntityData>
     {
         self.entities.keys()
     }
 
-    /**
-     * Returns the name of an entity
-     */
+    /// Returns the name of an entity.
     pub fn get_entity_name<'a>(&'a self, id: &EntityID)
         -> Result<Option<String>, StateError>
     {
         Ok((try!(self.get_entity_by_id(id))).name.clone())
     }
 
-    /**
-     * Returns the list of all entities with the given name
-     */
+    /// Returns the list of all entities with the given name.
     pub fn get_entities_by_name<'a>(&'a self, name: &str)
         -> Vec<EntityID>
     {
         self.entities.iter().filter(|&(_, ref e)| e.name == Some(name.to_string())).map(|(id, _)| id.clone()).collect()
     }
 
-    /// Returns true if the entity is visible
+    /// Returns true if the entity is visible.
     pub fn is_entity_visible(&self, id: &EntityID)
         -> Result<bool, StateError>
     {
         Ok((try!(self.get_entity_by_id(id))).visible)
     }
 
-    /**
-     * Returns true if the component is visible
-     */
+    /// Returns true if the component is visible.
     pub fn is_component_visible(&self, id: &ComponentID)
         -> Result<bool, StateError>
     {
@@ -391,11 +361,9 @@ impl EntitiesState {
         Ok((try!(self.get_entity_by_id(&owner))).visible)
     }
 
-    /**
-     * Sets an entity as parent of another one
-     * When a component is destroyed, all its children are destroyed it
-     * If the component already has a parent, it's removed
-     */
+    /// Sets an entity as parent of another one.
+    /// When a component is destroyed, all its children are destroyed it.
+    /// If the component already has a parent, it's removed.
     pub fn set_component_parent(&mut self, component: &ComponentID, parent: &ComponentID)
         -> Result<(), StateError>
     {
@@ -416,25 +384,19 @@ impl EntitiesState {
         Ok(())
     }
 
-    /**
-     * Resets the parent of an entity, breaking the parent-child link
-     */
+    /// Resets the parent of an entity, breaking the parent-child link.
     pub fn clear_component_parent(&mut self, component: &ComponentID) {
         unimplemented!()
     }
 
-    /**
-     * Returns the list of children of a component
-     */
+    /// Returns the list of children of a component.
     pub fn get_component_children(&self, component: &ComponentID)
         -> Result<Vec<ComponentID>, StateError>
     {
         Ok((try!(self.get_component_by_id(component))).children.clone())
     }
 
-    /**
-     * Creates a component inherited from another
-     */
+    /// Creates a component inherited from another.
     fn create_inherited_component(&mut self, owner: &EntityID, parent: &ComponentID, inherit: &ComponentID)
         -> Result<ComponentID, StateError>
     {
