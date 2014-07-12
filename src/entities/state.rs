@@ -126,203 +126,10 @@ impl EntitiesState {
         }
     }
 
-    /// Creates a new empty entity in the state.
-    pub fn create_entity(&mut self, name: Option<String>, visible: bool)
-        -> EntityID
-    {
-        let id = self.next_entity_id;
-
-        let entity = EntityData {
-            name: name,
-            visible: visible,
-
-            components: Vec::new(),
-
-            components_of_type: Vec::new(),
-            default_parameters: std::collections::HashMap::new()
-        };
-
-        self.entities.insert(id, entity);
-        match &mut self.next_entity_id { &EntityID(ref mut id) => (*id) += 1 };
-        id
-    }
-
-    /// Destroys an entity.
-    ///
-    /// This operation will also destroy all the components owned by this entity and all components whose type is this entity.
-    pub fn destroy_entity(&mut self, id: &EntityID)
-        -> Result<(), StateError>
-    {
-        let components_list = {
-            let entity = try!(self.get_entity_by_id(id));
-
-            if entity.components_of_type.len() != 0 {
-                unimplemented!()
-                //return Err(format!("Cannot destroy entity with ID {} (name: {}) because it has components of its type", id, entity.name));
-            }
-
-            entity.components.clone()
-        };
-
-        for cmp in components_list.iter() {
-            // ignoring error from destroying component because we don't want to recreate them
-            self.destroy_component(cmp).ok();
-        }
-
-        self.entities.remove(id);
-        Ok(())
-    }
-
-
     pub fn get_components_iter<'a>(&'a self)
         -> std::collections::hashmap::Keys<'a, ComponentID, Component>
     {
         self.components.keys()
-    }
-
-    /// Creates a new component of a native type.
-    pub fn create_native_component(&mut self, owner: &EntityID, typename: &str, data: HashMap<String, Data>)
-        -> Result<ComponentID, StateError>
-    {
-        if !self.entities.contains_key(owner) {
-            return Err(EntityNotFound(owner.clone()))
-        }
-
-        let newID = self.next_component_id;
-
-        let newComponent = Component {
-            owner: owner.clone(),
-            data: ComponentDataNative(data),
-            linked_from: Vec::new(),
-            parent: None,
-            children: Vec::new(),
-            cmp_type: NativeComponentType(typename.to_string())
-        };
-
-        self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
-
-        self.components.insert(newID, newComponent);
-        match &mut self.next_component_id { &ComponentID(ref mut id) => (*id) += 1 };
-
-        if self.is_entity_visible(owner).unwrap() {
-            self.visible_components_of_native_type.insert_or_update_with(typename.to_string(), vec!(newID), |k,v| v.push(newID));
-        }
-
-        Ok(newID)
-    }
-
-    /// Creates a new component of an entity type.
-    pub fn create_component_from_entity(&mut self, owner: &EntityID, typename: &EntityID, data: HashMap<String, Data>)
-        -> Result<ComponentID, StateError>
-    {
-        if !self.entities.contains_key(owner) {
-            return Err(EntityNotFound(owner.clone()))
-        }
-        if !self.entities.contains_key(typename) {
-            return Err(EntityNotFound(typename.clone()))
-        }
-
-        let newID = self.next_component_id;
-
-        let newComponent = Component {
-            owner: owner.clone(),
-            data: ComponentDataNative(data),
-            linked_from: Vec::new(),
-            parent: None,
-            children: Vec::new(),
-            cmp_type: EntityComponentType(typename.clone())
-        };
-
-        self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
-        self.get_entity_by_id_mut(typename).unwrap().components_of_type.push(newID);
-
-        // creating the list of components to inherit
-        let components_to_inherit: Vec<ComponentID> = self.get_entity_by_id(typename).unwrap().components.iter().map(|c| c.clone()).collect();
-
-        self.components.insert(newID, newComponent);
-        match &mut self.next_component_id { &ComponentID(ref mut id) => (*id) += 1 };
-
-        // inheriting components
-        for cmp in components_to_inherit.move_iter() {
-            match self.create_inherited_component(owner, &newID, &cmp) {
-                Ok(_) => (),
-                Err(err) => {
-                    self.destroy_component(&newID);     // rollback
-                    return Err(err);
-                }
-            }
-        }
-
-        Ok(newID)
-    }
-
-    /// Destroys a component.
-    pub fn destroy_component(&mut self, id: &ComponentID)
-        -> Result<(), StateError>
-    {
-        let (children, linked, parent, cmp_type) = {
-            let cmp = try!(self.get_component_by_id(id));
-            (cmp.children.clone(), cmp.linked_from.clone(), cmp.parent.clone(), cmp.cmp_type.clone())
-        };
-
-        if parent.is_some() {
-            let mut p = self.get_component_by_id_mut(&parent.unwrap()).unwrap();
-            let pos = p.children.iter().position(|c| *c == *id).unwrap();
-            p.children.remove(pos);
-        }
-
-        for child in children.iter() {
-            self.destroy_component(child).ok();
-        }
-
-        for cmp in linked.iter() {
-            self.destroy_component(cmp).ok();
-        }
-
-        // removing from entity
-        {
-            let owner = self.get_component_by_id(id).unwrap().owner;
-            let mut entity = self.get_entity_by_id_mut(&owner).unwrap();
-            let pos = entity.components.iter().position(|e| *e == *id).unwrap();
-            entity.components.remove(pos);
-        }
-
-        // removing from visible_components_of_native_type
-        match &cmp_type {
-            &NativeComponentType(ref t) => {
-                self.visible_components_of_native_type.find_mut(t).unwrap().retain(|e| e != id);
-            },
-            _ => ()
-        }
-
-        // removing from components list
-        self.components.remove(id);
-
-        Ok(())
-    }
-
-    /// Modifies an element of a component.
-    pub fn set(&mut self, id: &ComponentID, field: &str, data: Data)
-        -> Result<(), StateError>
-    {
-        let mut idIter = id.clone();
-
-        loop {
-            let mut component = try!(self.get_component_by_id_mut(&idIter));
-
-            match &mut component.data {
-                &ComponentDataNative(ref mut val) => {
-                    val.insert(field.to_string(), data);
-                    return Ok(());
-                },
-                &ComponentDataLink(c) => {
-                    idIter = c.clone();
-                    continue;
-                }
-            }
-        }
-
-        unreachable!();
     }
 
     /// Returns an iterator to all the entities in the state.
@@ -330,70 +137,6 @@ impl EntitiesState {
         -> std::collections::hashmap::Keys<'a, EntityID, EntityData>
     {
         self.entities.keys()
-    }
-
-    /// Returns the name of an entity.
-    pub fn get_entity_name<'a>(&'a self, id: &EntityID)
-        -> Result<Option<String>, StateError>
-    {
-        Ok((try!(self.get_entity_by_id(id))).name.clone())
-    }
-
-    /// Returns the list of all entities with the given name.
-    pub fn get_entities_by_name<'a>(&'a self, name: &str)
-        -> Vec<EntityID>
-    {
-        self.entities.iter().filter(|&(_, ref e)| e.name == Some(name.to_string())).map(|(id, _)| id.clone()).collect()
-    }
-
-    /// Returns true if the entity is visible.
-    pub fn is_entity_visible(&self, id: &EntityID)
-        -> Result<bool, StateError>
-    {
-        Ok((try!(self.get_entity_by_id(id))).visible)
-    }
-
-    /// Returns true if the component is visible.
-    pub fn is_component_visible(&self, id: &ComponentID)
-        -> Result<bool, StateError>
-    {
-        let owner = try!(self.get_owner(id));
-        Ok((try!(self.get_entity_by_id(&owner))).visible)
-    }
-
-    /// Sets an entity as parent of another one.
-    /// When a component is destroyed, all its children are destroyed it.
-    /// If the component already has a parent, it's removed.
-    pub fn set_component_parent(&mut self, component: &ComponentID, parent: &ComponentID)
-        -> Result<(), StateError>
-    {
-        if !self.components.contains_key(component) {
-            return Err(ComponentNotFound(component.clone()))
-        }
-        if !self.components.contains_key(parent) {
-            return Err(ComponentNotFound(parent.clone()))
-        }
-
-        if self.get_component_by_id_mut(component).unwrap().parent.is_some() {
-            self.clear_component_parent(component);
-        }
-
-        self.get_component_by_id_mut(component).unwrap().parent = Some(parent.clone());
-        self.get_component_by_id_mut(parent).unwrap().children.push(component.clone());
-
-        Ok(())
-    }
-
-    /// Resets the parent of an entity, breaking the parent-child link.
-    pub fn clear_component_parent(&mut self, component: &ComponentID) {
-        unimplemented!()
-    }
-
-    /// Returns the list of children of a component.
-    pub fn get_component_children(&self, component: &ComponentID)
-        -> Result<Vec<ComponentID>, StateError>
-    {
-        Ok((try!(self.get_component_by_id(component))).children.clone())
     }
 
     /// Creates a component inherited from another.
@@ -498,6 +241,190 @@ impl EntitiesState {
 }
 
 impl EntitiesHelper for EntitiesState {
+    fn create_entity(&mut self, name: Option<String>, visible: bool)
+        -> EntityID
+    {
+        let id = self.next_entity_id;
+
+        let entity = EntityData {
+            name: name,
+            visible: visible,
+
+            components: Vec::new(),
+
+            components_of_type: Vec::new(),
+            default_parameters: std::collections::HashMap::new()
+        };
+
+        self.entities.insert(id, entity);
+        match &mut self.next_entity_id { &EntityID(ref mut id) => (*id) += 1 };
+        id
+    }
+
+    fn destroy_entity(&mut self, id: &EntityID)
+        -> Result<(), StateError>
+    {
+        let components_list = {
+            let entity = try!(self.get_entity_by_id(id));
+
+            if entity.components_of_type.len() != 0 {
+                unimplemented!()
+                //return Err(format!("Cannot destroy entity with ID {} (name: {}) because it has components of its type", id, entity.name));
+            }
+
+            entity.components.clone()
+        };
+
+        for cmp in components_list.iter() {
+            // ignoring error from destroying component because we don't want to recreate them
+            self.destroy_component(cmp).ok();
+        }
+
+        self.entities.remove(id);
+        Ok(())
+    }
+
+    fn create_native_component(&mut self, owner: &EntityID, typename: &str, data: HashMap<String, Data>)
+        -> Result<ComponentID, StateError>
+    {
+        if !self.entities.contains_key(owner) {
+            return Err(EntityNotFound(owner.clone()))
+        }
+
+        let newID = self.next_component_id;
+
+        let newComponent = Component {
+            owner: owner.clone(),
+            data: ComponentDataNative(data),
+            linked_from: Vec::new(),
+            parent: None,
+            children: Vec::new(),
+            cmp_type: NativeComponentType(typename.to_string())
+        };
+
+        self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
+
+        self.components.insert(newID, newComponent);
+        match &mut self.next_component_id { &ComponentID(ref mut id) => (*id) += 1 };
+
+        if self.is_entity_visible(owner).unwrap() {
+            self.visible_components_of_native_type.insert_or_update_with(typename.to_string(), vec!(newID), |k,v| v.push(newID));
+        }
+
+        Ok(newID)
+    }
+
+    fn create_component_from_entity(&mut self, owner: &EntityID, typename: &EntityID, data: HashMap<String, Data>)
+        -> Result<ComponentID, StateError>
+    {
+        if !self.entities.contains_key(owner) {
+            return Err(EntityNotFound(owner.clone()))
+        }
+        if !self.entities.contains_key(typename) {
+            return Err(EntityNotFound(typename.clone()))
+        }
+
+        let newID = self.next_component_id;
+
+        let newComponent = Component {
+            owner: owner.clone(),
+            data: ComponentDataNative(data),
+            linked_from: Vec::new(),
+            parent: None,
+            children: Vec::new(),
+            cmp_type: EntityComponentType(typename.clone())
+        };
+
+        self.get_entity_by_id_mut(owner).unwrap().components.push(newID);
+        self.get_entity_by_id_mut(typename).unwrap().components_of_type.push(newID);
+
+        // creating the list of components to inherit
+        let components_to_inherit: Vec<ComponentID> = self.get_entity_by_id(typename).unwrap().components.iter().map(|c| c.clone()).collect();
+
+        self.components.insert(newID, newComponent);
+        match &mut self.next_component_id { &ComponentID(ref mut id) => (*id) += 1 };
+
+        // inheriting components
+        for cmp in components_to_inherit.move_iter() {
+            match self.create_inherited_component(owner, &newID, &cmp) {
+                Ok(_) => (),
+                Err(err) => {
+                    self.destroy_component(&newID);     // rollback
+                    return Err(err);
+                }
+            }
+        }
+
+        Ok(newID)
+    }
+
+    fn destroy_component(&mut self, id: &ComponentID)
+        -> Result<(), StateError>
+    {
+        let (children, linked, parent, cmp_type) = {
+            let cmp = try!(self.get_component_by_id(id));
+            (cmp.children.clone(), cmp.linked_from.clone(), cmp.parent.clone(), cmp.cmp_type.clone())
+        };
+
+        if parent.is_some() {
+            let mut p = self.get_component_by_id_mut(&parent.unwrap()).unwrap();
+            let pos = p.children.iter().position(|c| *c == *id).unwrap();
+            p.children.remove(pos);
+        }
+
+        for child in children.iter() {
+            self.destroy_component(child).ok();
+        }
+
+        for cmp in linked.iter() {
+            self.destroy_component(cmp).ok();
+        }
+
+        // removing from entity
+        {
+            let owner = self.get_component_by_id(id).unwrap().owner;
+            let mut entity = self.get_entity_by_id_mut(&owner).unwrap();
+            let pos = entity.components.iter().position(|e| *e == *id).unwrap();
+            entity.components.remove(pos);
+        }
+
+        // removing from visible_components_of_native_type
+        match &cmp_type {
+            &NativeComponentType(ref t) => {
+                self.visible_components_of_native_type.find_mut(t).unwrap().retain(|e| e != id);
+            },
+            _ => ()
+        }
+
+        // removing from components list
+        self.components.remove(id);
+
+        Ok(())
+    }
+
+    fn set(&mut self, id: &ComponentID, field: &str, data: Data)
+        -> Result<(), StateError>
+    {
+        let mut idIter = id.clone();
+
+        loop {
+            let mut component = try!(self.get_component_by_id_mut(&idIter));
+
+            match &mut component.data {
+                &ComponentDataNative(ref mut val) => {
+                    val.insert(field.to_string(), data);
+                    return Ok(());
+                },
+                &ComponentDataLink(c) => {
+                    idIter = c.clone();
+                    continue;
+                }
+            }
+        }
+
+        unreachable!();
+    }
+
     fn get_components_list(&self)
         -> Vec<ComponentID>
     {
@@ -536,6 +463,61 @@ impl EntitiesHelper for EntitiesState {
                 self.get(&c, field)
             }
         }
+    }
+
+    fn get_entity_name<'a>(&'a self, id: &EntityID)
+        -> Result<Option<String>, StateError>
+    {
+        Ok((try!(self.get_entity_by_id(id))).name.clone())
+    }
+
+    fn get_entities_by_name<'a>(&'a self, name: &str)
+        -> Vec<EntityID>
+    {
+        self.entities.iter().filter(|&(_, ref e)| e.name == Some(name.to_string())).map(|(id, _)| id.clone()).collect()
+    }
+
+    fn is_entity_visible(&self, id: &EntityID)
+        -> Result<bool, StateError>
+    {
+        Ok((try!(self.get_entity_by_id(id))).visible)
+    }
+
+    fn is_component_visible(&self, id: &ComponentID)
+        -> Result<bool, StateError>
+    {
+        let owner = try!(self.get_owner(id));
+        Ok((try!(self.get_entity_by_id(&owner))).visible)
+    }
+
+    fn set_component_parent(&mut self, component: &ComponentID, parent: &ComponentID)
+        -> Result<(), StateError>
+    {
+        if !self.components.contains_key(component) {
+            return Err(ComponentNotFound(component.clone()))
+        }
+        if !self.components.contains_key(parent) {
+            return Err(ComponentNotFound(parent.clone()))
+        }
+
+        if self.get_component_by_id_mut(component).unwrap().parent.is_some() {
+            self.clear_component_parent(component);
+        }
+
+        self.get_component_by_id_mut(component).unwrap().parent = Some(parent.clone());
+        self.get_component_by_id_mut(parent).unwrap().children.push(component.clone());
+
+        Ok(())
+    }
+
+    fn clear_component_parent(&mut self, component: &ComponentID) {
+        unimplemented!()
+    }
+
+    fn get_component_children(&self, component: &ComponentID)
+        -> Result<Vec<ComponentID>, StateError>
+    {
+        Ok((try!(self.get_component_by_id(component))).children.clone())
     }
 }
 

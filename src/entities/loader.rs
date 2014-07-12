@@ -3,6 +3,7 @@ use serialize::json;
 use std::ascii::StrAsciiExt;
 use std::collections::{ HashSet, HashMap };
 use super::EntitiesState;
+use super::EntitiesHelper;
 use super::EntityID;
 use super::ComponentID;
 

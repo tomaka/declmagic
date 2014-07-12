@@ -4,6 +4,7 @@ pub use self::state::{ EntitiesState, Data, EntityID, ComponentID, Number, Strin
 pub use self::state::{ ComponentType, NativeComponentType, EntityComponentType };
 pub use self::state::{ StateError };
 
+use std::collections::HashMap;
 use lua::any;
 
 pub mod loader;
@@ -11,6 +12,31 @@ mod state;
 
 // TODO: ComponentID, EntityID must be associated types
 pub trait EntitiesHelper {
+    /// Creates a new empty entity in the state.
+    fn create_entity(&mut self, name: Option<String>, visible: bool) -> EntityID;
+
+    /// Destroys an entity.
+    ///
+    /// This operation will also destroy all the components owned by
+    /// this entity and all components whose type is this entity.
+    fn destroy_entity(&mut self, id: &EntityID) -> Result<(), StateError>;
+
+    /// Creates a new component of a native type.
+    fn create_native_component(&mut self, owner: &EntityID,
+                               typename: &str, data: HashMap<String, Data>)
+        -> Result<ComponentID, StateError>;
+
+    /// Creates a new component of an entity type.
+    fn create_component_from_entity(&mut self, owner: &EntityID, typename: &EntityID,
+                                    data: HashMap<String, Data>)
+                                    -> Result<ComponentID, StateError>;
+
+    /// Destroys a component.
+    fn destroy_component(&mut self, id: &ComponentID) -> Result<(), StateError>;
+
+    /// Modifies an element of a component.
+    fn set(&mut self, id: &ComponentID, field: &str, data: Data) -> Result<(), StateError>;
+
     /// Returns the type of the component.
     fn get_type(&self, id: &ComponentID)
         -> Result<ComponentType, StateError>;
@@ -19,7 +45,8 @@ pub trait EntitiesHelper {
     fn get_components_list(&self)
         -> Vec<ComponentID>;
 
-    /// Returns the list of all the components which are visible and are of the requested native type.
+    /// Returns the list of all the components which are visible
+    /// and are of the requested native type.
     fn get_visible_native_components(&self, nativetype: &str)
         -> Vec<ComponentID>;
     
@@ -27,9 +54,36 @@ pub trait EntitiesHelper {
     fn get_owner(&self, id: &ComponentID)
         -> Result<EntityID, StateError>;
 
-    /**
-     * Returns an element of a component
-     */
+    /// Returns the name of an entity.
+    fn get_entity_name<'a>(&'a self, id: &EntityID)
+        -> Result<Option<String>, StateError>;
+
+    /// Returns the list of all entities with the given name.
+    fn get_entities_by_name<'a>(&'a self, name: &str)
+        -> Vec<EntityID>;
+
+    /// Returns true if the entity is visible.
+    fn is_entity_visible(&self, id: &EntityID)
+        -> Result<bool, StateError>;
+
+    /// Returns true if the component is visible.
+    fn is_component_visible(&self, id: &ComponentID)
+        -> Result<bool, StateError>;
+
+    /// Sets an entity as parent of another one.
+    /// When a component is destroyed, all its children are destroyed it.
+    /// If the component already has a parent, it's removed.
+    fn set_component_parent(&mut self, component: &ComponentID, parent: &ComponentID)
+        -> Result<(), StateError>;
+
+    /// Resets the parent of an entity, breaking the parent-child link.
+    fn clear_component_parent(&mut self, component: &ComponentID);
+
+    /// Returns the list of children of a component.
+    fn get_component_children(&self, component: &ComponentID)
+        -> Result<Vec<ComponentID>, StateError>;
+
+    /// Returns an element of a component.
     fn get<'a>(&'a self, id: &ComponentID, field: &str)
         -> Result<&'a Data, StateError>;
 
