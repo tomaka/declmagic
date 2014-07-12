@@ -24,61 +24,45 @@ impl InputSystem {
     pub fn process(&mut self, state: &mut EntitiesState, elapsed: &f64, messages: &[Message])
     {
         self.process_hover(state, elapsed, messages);
+        self.process_input_handlers(state, elapsed, messages);
+    }
 
-        let mut filteredMessagesIter = messages.iter().filter_map(|msg| match msg {
-                                                                            &Pressed(ref e) => Some((e.clone(), true)),
-                                                                            &Released(ref e) => Some((e.clone(), false)),
-                                                                            _ => None
-                                                                        });
+    /// Processes all "inputHandler" components.
+    pub fn process_input_handlers(&mut self, state: &mut EntitiesState,
+                                  elapsed: &f64, messages: &[Message])
+    {
+        // creating an iterator to have only the "pressed" and "release" messages
+        let mut filteredMessagesIter = messages
+            .iter()
+            .filter_map(|msg| match msg {
+                &Pressed(ref e) => Some((e, true)),
+                &Released(ref e) => Some((e, false)),
+                _ => None
+            });
 
         for (element, pressed) in filteredMessagesIter {
-            let elementStr = format!("{}", element);
+            let element = format!("{}", element);
 
-            for (component, script) in state
-                                .get_visible_native_components("inputHandler")
-                                .move_iter()
-                                // filter if they have the right element
-                                .filter(|c| match state.get_as_string(c, "element") { Some(s) => s == elementStr, _ => false })
-                                // obtain the script and the component id
-                                .filter_map(|c| match state.get_as_string(&c, "script") { Some(s) => Some((c.clone(), s)), _ => None })
-
-                                .collect::<Vec<(ComponentID, String)>>().move_iter()
+            // getting all "inputHandler" components that match the element
+            for component in state
+                .get_visible_native_components("inputHandler")
+                .move_iter()
+                .filter(|c|
+                    match state.get_as_string(c, "element") {
+                        Some(s) => s == element,
+                        _ => false
+                    }
+                )
+                .collect::<Vec<ComponentID>>().move_iter()
             {
-                script::execute_mut(state, &component, &script.as_slice()).unwrap();
-            }
-
-            for (component, entity) in state
-                                .get_visible_native_components("inputHandler")
-                                .move_iter()
-                                // filter if they have the right element
-                                .filter(|c| match state.get_as_string(c, "element") { Some(s) => s == elementStr, _ => false })
-                                // obtain the script and the component id
-                                .filter_map(|c| match state.get_as_entity(&c, "prototypeWhilePressed") { Some(id) => Some((c.clone(), id)), _ => None })
-                                .collect::<Vec<(ComponentID, EntityID)>>().move_iter()
-            {
-                let children = state.get_component_children(&component).unwrap();
-
-                match (children.len() != 0, pressed) {
-                    (false, true) =>
-                        {
-                            let owner = match state.get_owner(&component) { Ok(o) => o, _ => continue };
-                            let newCmp = state.create_component_from_entity(&owner, &entity, ::std::collections::HashMap::new()).unwrap();
-                            state.set_component_parent(&newCmp, &component);
-                        },
-
-                    (true, false) =>
-                        {
-                            for c in children.iter() {
-                                state.destroy_component(c);
-                            }
-                        },
-
-                    _ => ()
-                }
+                // this component **may** need an update
+                // we delegate this to a subfunction
+                self.update_input_handler(state, &component, pressed)
             }
         }
     }
 
+    /// Processes all "hoverHandler" components.
     fn process_hover(&mut self, state: &mut EntitiesState, _: &f64, messages: &[Message])
     {
         // getting the mouse position between (-1, -1) and (1, 1)
@@ -189,6 +173,47 @@ impl InputSystem {
                         None => (),
                         Some(script) => { script::execute_mut(state, &cmp, &script.as_slice()).unwrap(); }
                     };
+                }
+            }
+        }
+    }
+
+    /// Updates a single "inputHandler" component.
+    /// This function checks whether the component has its state matching
+    /// the pressed/release state of the input.
+    fn update_input_handler(&mut self, state: &mut EntitiesState,
+                            component: &ComponentID, pressed: bool)
+    {
+        // executing the script if the component has one
+        match state.get_as_string(component, "script") {
+            Some(script) => {
+                script::execute_mut(state, component, &script.as_slice()).unwrap();
+            },
+            None => ()
+        };
+
+        // handling prototype
+        match state.get_as_entity(component, "prototypeWhilePressed") {
+            None => (),
+            Some(prototype) => {
+                let children = state.get_component_children(component).unwrap();
+
+                match (children.len() != 0, pressed) {
+                    (false, true) =>
+                        {
+                            let owner = match state.get_owner(component) { Ok(o) => o, _ => return };
+                            let newCmp = state.create_component_from_entity(&owner, &prototype, ::std::collections::HashMap::new()).unwrap();
+                            state.set_component_parent(&newCmp, component);
+                        },
+
+                    (true, false) =>
+                        {
+                            for c in children.iter() {
+                                state.destroy_component(c);
+                            }
+                        },
+
+                    _ => ()
                 }
             }
         }
