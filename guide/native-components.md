@@ -194,6 +194,23 @@ Units movement should be done by manipulating `requestedMovement`.
 
 ## Mechanics
 
+### destination
+
+**(not implemented)**
+
+Entity will try to move (via a `requestedMovement` component) to the destination point.
+
+```rust
+{
+	"type": "destination",
+	"data": {
+		"x": <number>,
+		"y": <number>,
+		"z": <number>
+	}
+}
+```
+
 ### executeNow
 
 **(not implemented)**
