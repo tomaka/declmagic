@@ -13,7 +13,7 @@ mod custom_display_system;
 pub struct DisplaySystem {
     display: Arc<ManagedDisplay>,
     customDisplay: custom_display_system::CustomDisplaySystem,
-    sprites: HashMap<ComponentID, (Option<SpriteDisplayer>, String)>,
+    sprites: HashMap<ComponentID, (SpriteDisplayer, String)>,
     logger: Box<::log::Logger>
 }
 
@@ -53,7 +53,7 @@ impl DisplaySystem {
                 0.0, 0.0, 1.0, 0.0,
                 pos.x, pos.y, pos.z, 1.0
             );
-            sprite.as_ref().map(|e| e.draw(&(translationMatrix * camera)));
+            sprite.draw(&(translationMatrix * camera));
         }
 
         self.customDisplay.draw(state);
@@ -80,14 +80,29 @@ impl DisplaySystem {
 
         // adding elements that are not yet created
         {
-            let toCreate = listOfComponents.iter()
+            let to_create = listOfComponents.iter()
                 .filter(|e| !self.sprites.contains_key(e.clone()))
                 .map(|e| e.clone())
                 .collect::<Vec<ComponentID>>();
 
-            for spriteDisplayComponent in toCreate.move_iter() {
+            for component in to_create.move_iter() {
+                // getting the name of the texture
+                let textureName = match state.get_as_string(&component, "texture") {
+                    Some(s) => s,
+                    _ => {
+                        // TODO: 
+                        //declmagic_error!(self.logger,
+                        //   "component {} has no valid \"texture\" element", component)
+                        continue
+                    }
+                };
+
                 // inserting in sprites list
-                self.sprites.insert(spriteDisplayComponent.clone(), (None, format!("")));
+                self.sprites.insert(component.clone(), (
+                    SpriteDisplayer::new(self.display.clone(), textureName.as_slice())
+                        .unwrap(),
+                    textureName
+                ));
             }
         }
 
@@ -104,24 +119,18 @@ impl DisplaySystem {
                 }
             };
 
-            if sprite.is_none() || currTexName.as_slice() != textureName.as_slice() {
-                (*sprite) = Some(
-                    SpriteDisplayer::new(self.display.clone(), textureName.as_slice()).unwrap()
-                );
+            if currTexName.as_slice() != textureName.as_slice() {
+                sprite.set_resource(textureName.as_slice());
                 *currTexName = textureName;
             }
 
             // getting coordinates
-            match sprite {
-                &Some(ref mut s) =>
-                    s.set_rectangle_coords(
-                        state.get_as_number(component, "leftX").map(|n| n as f32),
-                        state.get_as_number(component, "topY").map(|n| n as f32),
-                        state.get_as_number(component, "rightX").map(|n| n as f32),
-                        state.get_as_number(component, "bottomY").map(|n| n as f32)
-                    ),
-                _ => fail!()
-            }
+            sprite.set_rectangle_coords(
+                state.get_as_number(component, "leftX").map(|n| n as f32),
+                state.get_as_number(component, "topY").map(|n| n as f32),
+                state.get_as_number(component, "rightX").map(|n| n as f32),
+                state.get_as_number(component, "bottomY").map(|n| n as f32)
+            );
         }
     }
 

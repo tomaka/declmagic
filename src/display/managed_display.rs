@@ -12,7 +12,7 @@ use resources::ResourcesLoader;
 pub struct ManagedDisplay {
 	display: Display,
 	loader: Box<ResourcesLoader+Send+Share>,
-	textures: Mutex<HashMap<String, ::std::sync::Weak<super::raw::Texture>>>
+	textures: Mutex<HashMap<String, ::std::sync::Arc<super::raw::Texture>>>
 }
 
 pub struct Texture {
@@ -36,10 +36,7 @@ impl ManagedDisplay {
 		let mut lock = self.textures.lock();
 
 		match lock.find(&String::from_str(name)) {
-			Some(v) => match v.upgrade() {
-				None => (),
-				Some(t) => return Ok(Texture { texture: t.clone() })
-			},
+			Some(v) => return Ok(Texture { texture: v.clone() }),
 			_ => ()
 		};
 
@@ -62,7 +59,7 @@ impl ManagedDisplay {
     		::stb_image::image::ImageF32(img) => self.display.build_texture(img.data.as_slice(), img.width, img.height, 1, 1)
 		});
 
-		lock.insert(name.to_string(), texture.downgrade());
+		lock.insert(name.to_string(), texture.clone());
 		Ok(Texture { texture: texture })
 	}
 

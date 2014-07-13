@@ -137,7 +137,8 @@ impl SpriteDisplayer {
 
 	pub fn set_resource(&mut self, resourceName: &str)
 	{
-		self.texture = self.display.load_texture(resourceName).unwrap(); 
+		self.texture = self.display.load_texture(resourceName).unwrap();
+		self.uniforms.lock().set_texture("uTexture", self.texture.deref());
 	}
 }
 
