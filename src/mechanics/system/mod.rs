@@ -4,30 +4,30 @@ use std::collections::{ HashSet, HashMap };
 use resources::ResourcesLoader;
 use self::extern_content::ExternContentSystem;
 
+use log;
+
 mod extern_content;
 
 pub struct MechanicsSystem {
     externContentSystem: ExternContentSystem,
-    logger: Box<::log::Logger>
 }
 
 impl MechanicsSystem {
-    pub fn new<RL: ResourcesLoader + Send + Share, L: ::log::Logger + 'static>(state: &EntitiesState, loader: RL, logger: L)
+    pub fn new<RL: ResourcesLoader + Send + Share>(state: &EntitiesState, loader: RL, log: |log::LogRecord|)
         -> MechanicsSystem
     {
         MechanicsSystem {
-            externContentSystem: ExternContentSystem::new(state, loader, logger.clone()),
-            logger: box logger
+            externContentSystem: ExternContentSystem::new(state, loader, |l| log(l))
         }
     }
 
-    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &f64)
+    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &f64, log: |log::LogRecord|)
     {
-        self.externContentSystem.process(state);
-        self.update_spawners(state, elapsed);
+        self.externContentSystem.process(state, |l| log(l));
+        self.update_spawners(state, elapsed, |l| log(l));
     }
 
-    fn update_spawners(&mut self, state: &mut EntitiesState, elapsed: &f64)
+    fn update_spawners(&mut self, state: &mut EntitiesState, elapsed: &f64, log: |log::LogRecord|)
     {
         // getting the list of all sprite displayer components
         let listOfComponents = state.get_visible_native_components("spawner");

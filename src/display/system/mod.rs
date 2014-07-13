@@ -7,40 +7,38 @@ use std::sync::Arc;
 use super::sprite_displayer::SpriteDisplayer;
 use super::Drawable;
 use physics;
+use log;
 
 mod custom_display_system;
 
 pub struct DisplaySystem {
     display: Arc<ManagedDisplay>,
     customDisplay: custom_display_system::CustomDisplaySystem,
-    sprites: HashMap<ComponentID, (SpriteDisplayer, String)>,
-    logger: Box<::log::Logger>
+    sprites: HashMap<ComponentID, (SpriteDisplayer, String)>
 }
 
 impl DisplaySystem {
-    pub fn new<L: ::log::Logger + 'static>(display: Arc<ManagedDisplay>, state: &EntitiesState,
-                                           mut logger: L)
+    pub fn new(display: Arc<ManagedDisplay>, state: &EntitiesState, log: |log::LogRecord|)
         -> DisplaySystem
     {
-        declmagic_info!(logger, "created display system");
+        //declmagic_info!(logger, "created display system");
 
         let customDisplaySystem =
-            custom_display_system::CustomDisplaySystem::new(display.clone(), state, logger.clone());
+            custom_display_system::CustomDisplaySystem::new(display.clone(), state, |l| log(l));
 
         DisplaySystem {
             display: display.clone(),
             customDisplay: customDisplaySystem,
-            sprites: HashMap::new(),
-            logger: box logger
+            sprites: HashMap::new()
         }
     }
 
-    pub fn draw(&mut self, state: &EntitiesState, _: &f64)
+    pub fn draw(&mut self, state: &EntitiesState, _: &f64, log: |log::LogRecord|)
     {
-        self.update_sprite_displayers(state);
+        self.update_sprite_displayers(state, |l| log(l));
 
         let camera = DisplaySystem::get_camera(state).unwrap_or_else(|| {
-            declmagic_warn!(self.logger, "no active camera on the scene");
+            log(log::LogRecord::new(log::Warning, format!("No active camera on the scene")));
             Eye::new_identity(4)
         });
 
@@ -56,10 +54,10 @@ impl DisplaySystem {
             sprite.draw(&(translationMatrix * camera));
         }
 
-        self.customDisplay.draw(state);
+        self.customDisplay.draw(state, |l| log(l));
     }
 
-    fn update_sprite_displayers(&mut self, state: &EntitiesState)
+    fn update_sprite_displayers(&mut self, state: &EntitiesState, log: |log::LogRecord|)
     {
         // getting the list of all sprite displayer components
         let listOfComponents = state

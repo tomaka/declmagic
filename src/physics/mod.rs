@@ -7,15 +7,15 @@ use nalgebra::na::{ Norm, Translation, Vec2, Vec3 };
 use ncollide::geom::geom::Geom;
 use nphysics::world::World;
 use nphysics::object::{ RigidBody };
+use log;
 
 pub struct PhysicsSystem {
     world: World,
     bodies: HashMap<EntityID, Rc<RefCell<RigidBody>>>,
-    logger: Box<::log::Logger>
 }
 
 impl PhysicsSystem {
-    pub fn new<L: ::log::Logger + 'static>(_: &EntitiesState, mut logger: L)
+    pub fn new(_: &EntitiesState, log: |log::LogRecord|)
         -> PhysicsSystem
     {
         let mut world = World::new();
@@ -27,12 +27,11 @@ impl PhysicsSystem {
 
         PhysicsSystem {
             world: world,
-            bodies: HashMap::new(),
-            logger: box logger
+            bodies: HashMap::new()
         }
     }
 
-    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &f64)
+    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &f64, log: |log::LogRecord|)
     {
         // getting the list of all entities that have physics activated
         let listOfEntities: HashSet<EntityID> = state.get_components_iter()

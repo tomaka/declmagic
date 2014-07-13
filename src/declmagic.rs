@@ -18,11 +18,9 @@ extern crate sync;
 use std::sync::Arc;
 use display::Drawable;
 
-#[macro_escape]
-pub mod log;
-
-pub mod resources;
 pub mod entities;
+pub mod log;
+pub mod resources;
 
 mod config;
 mod display;
@@ -54,17 +52,15 @@ impl Game {
 	pub fn new<RL: resources::ResourcesLoader+Send+Share>(resources: RL)
 		-> Game
 	{
-		let logger = ::log::LogSystem::new();
-
 		let display = Arc::new(display::managed_display::ManagedDisplay::new(display::raw::Display::new(1024, 768, "Game"), box resources.clone() as Box<resources::ResourcesLoader+Send+Share>));
 
 		let mut state = entities::EntitiesState::new();
 		entities::loader::load(&resources, "main", &mut state).unwrap();
 
-		let displaySystem = display::DisplaySystem::new(display.clone(), &state, logger.clone());
-		let inputSystem = input::InputSystem::new(&state, logger.clone());
-		let physicsSystem = physics::PhysicsSystem::new(&state, logger.clone());
-		let mechanicsSystem = mechanics::MechanicsSystem::new(&state, resources.clone(), logger.clone());
+		let displaySystem = display::DisplaySystem::new(display.clone(), &state, |_|{});
+		let inputSystem = input::InputSystem::new(&state, |_|{});
+		let physicsSystem = physics::PhysicsSystem::new(&state, |_|{});
+		let mechanicsSystem = mechanics::MechanicsSystem::new(&state, resources.clone(), |_|{});
 
 		Game {
 			display: display.clone(),
@@ -103,10 +99,10 @@ impl Game {
 				};
 			}
 
-			self.inputSystem.process(&mut self.state, &period, inputMessages.as_slice());
-			self.physicsSystem.process(&mut self.state, &period);
-			self.mechanicsSystem.process(&mut self.state, &period);
-			self.displaySystem.draw(&mut self.state, &period);
+			self.inputSystem.process(&mut self.state, &period, inputMessages.as_slice(), |_|{});
+			self.physicsSystem.process(&mut self.state, &period, |_|{});
+			self.mechanicsSystem.process(&mut self.state, &period, |_|{});
+			self.displaySystem.draw(&mut self.state, &period, |_|{});
 
 			for system in self.thirdPartySystems.mut_iter() {
 				system.process(&mut self.state, &period)

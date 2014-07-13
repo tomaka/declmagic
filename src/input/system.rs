@@ -3,33 +3,34 @@ use entities::{ EntitiesState, EntitiesHelper, EntityID, ComponentID, NativeComp
 use nalgebra::na;
 use nalgebra::na::Inv;
 use script;
+use log;
 
 pub struct InputSystem {
-    logger: Box<::log::Logger>,
     current_hover: Option<EntityID>,
     last_known_mouse_position: na::Vec2<f64>
 }
 
 impl InputSystem {
-    pub fn new<L: ::log::Logger + 'static>(_: &EntitiesState, logger: L)
+    pub fn new(_: &EntitiesState, log: |log::LogRecord|)
         -> InputSystem
     {
         InputSystem {
-            logger: box logger,
             current_hover: None,
             last_known_mouse_position: na::Vec2::new(0.0, 0.0)
         }
     }
 
-    pub fn process(&mut self, state: &mut EntitiesState, elapsed: &f64, messages: &[Message])
+    pub fn process(&mut self, state: &mut EntitiesState,
+                   elapsed: &f64, messages: &[Message], log: |log::LogRecord|)
     {
-        self.process_hover(state, elapsed, messages);
-        self.process_input_handlers(state, elapsed, messages);
+        self.process_hover(state, elapsed, messages, |l| log(l));
+        self.process_input_handlers(state, elapsed, messages, |l| log(l));
     }
 
     /// Processes all "inputHandler" components.
     fn process_input_handlers(&mut self, state: &mut EntitiesState,
-                                  elapsed: &f64, messages: &[Message])
+                                  elapsed: &f64, messages: &[Message],
+                                  log: |log::LogRecord|)
     {
         // creating an iterator to have only the "pressed" and "release" messages
         let mut filteredMessagesIter = messages
@@ -57,13 +58,13 @@ impl InputSystem {
             {
                 // this component **may** need an update
                 // we delegate this to a subfunction
-                self.update_input_handler(state, &component, pressed)
+                self.update_input_handler(state, &component, pressed, |l| log(l))
             }
         }
     }
 
     /// Processes all "hoverHandler" components.
-    fn process_hover(&mut self, state: &mut EntitiesState, _: &f64, messages: &[Message])
+    fn process_hover(&mut self, state: &mut EntitiesState, _: &f64, messages: &[Message], log: |log::LogRecord|)
     {
         // getting the mouse position between (-1, -1) and (1, 1)
         let mouse_position = messages
@@ -195,7 +196,7 @@ impl InputSystem {
     /// This function checks whether the component has its state matching
     /// the pressed/release state of the input.
     fn update_input_handler(&mut self, state: &mut EntitiesState,
-                            component: &ComponentID, pressed: bool)
+                            component: &ComponentID, pressed: bool, log: |log::LogRecord|)
     {
         // executing the script if the component has one
         match state.get_as_string(component, "script") {
