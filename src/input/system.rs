@@ -28,7 +28,7 @@ impl InputSystem {
     }
 
     /// Processes all "inputHandler" components.
-    pub fn process_input_handlers(&mut self, state: &mut EntitiesState,
+    fn process_input_handlers(&mut self, state: &mut EntitiesState,
                                   elapsed: &f64, messages: &[Message])
     {
         // creating an iterator to have only the "pressed" and "release" messages
@@ -73,12 +73,15 @@ impl InputSystem {
                 _ => None
             })
             .next().unwrap_or(self.last_known_mouse_position);
+
         self.last_known_mouse_position = mouse_position;
 
         // getting the mouse position in camera units
         let mouse_position = {
-            let mousePosVector = na::Vec4::new(mouse_position.x as f32, mouse_position.y as f32, 0.0, 1.0);
-            let matrix = { let mut m = ::display::DisplaySystem::get_camera(state).unwrap(); m.inv(); m };
+            let mousePosVector =
+                na::Vec4::new(mouse_position.x as f32, mouse_position.y as f32, 0.0, 1.0);
+            let matrix =
+                { let mut m = ::display::DisplaySystem::get_camera(state).unwrap(); m.inv(); m };
             let result = mousePosVector * matrix;
             na::Vec2::new(result.x / result.w, result.y / result.w)
         };
@@ -89,17 +92,22 @@ impl InputSystem {
             .move_iter()
             .filter_map(|component| {
                 let entity = match state.get_owner(&component) { Ok(t) => t, _ => return None };
-                let entity_position = ::physics::PhysicsSystem::get_entity_position(state, &entity);
+                let entity_position =
+                    ::physics::PhysicsSystem::get_entity_position(state, &entity);
 
-                let coord1 = match (state.get_as_number(&component, "leftX"), state.get_as_number(&component, "bottomY"))
+                let coord1 = match (state.get_as_number(&component, "leftX"),
+                                    state.get_as_number(&component, "bottomY"))
                 {
-                    (Some(x), Some(y)) => na::Vec2::new(x as f32 + entity_position.x, y as f32 + entity_position.y),
+                    (Some(x), Some(y)) =>
+                        na::Vec2::new(x as f32 + entity_position.x, y as f32 + entity_position.y),
                     _ => return None
                 };
 
-                let coord2 = match (state.get_as_number(&component, "rightX"), state.get_as_number(&component, "topY"))
+                let coord2 = match (state.get_as_number(&component, "rightX"),
+                                    state.get_as_number(&component, "topY"))
                 {
-                    (Some(x), Some(y)) => na::Vec2::new(x as f32 + entity_position.x, y as f32 + entity_position.y),
+                    (Some(x), Some(y)) =>
+                        na::Vec2::new(x as f32 + entity_position.x, y as f32 + entity_position.y),
                     _ => return None
                 };
 
@@ -125,11 +133,8 @@ impl InputSystem {
         if self.current_hover.is_some() {
             // looping through each "hoverHandler" of the current_hover entity
             for cmp in state
-                .get_components_iter()
-                .filter(|c| state.is_component_visible(*c).unwrap())
-                .filter(|c| match state.get_type(*c) { Ok(NativeComponentType(t)) => t.as_slice() == "hoverHandler", _ => false })
-                .filter(|c| state.get_owner(*c).ok() == self.current_hover)
-                .map(|c| c.clone())
+                .get_visible_native_components("hoverHandler").move_iter()
+                .filter(|c| state.get_owner(c).ok() == self.current_hover)
                 .collect::<Vec<ComponentID>>().move_iter()
             {
                 // removing all its children (ie. the prototype)
@@ -140,7 +145,9 @@ impl InputSystem {
                 // executing onLeave script
                 match state.get_as_string(&cmp, "scriptOnLeave") {
                     None => (),
-                    Some(script) => { script::execute_mut(state, &cmp, &script.as_slice()).unwrap(); }
+                    Some(script) => {
+                        script::execute_mut(state, &cmp, &script.as_slice()).unwrap();
+                    }
                 };
             }
         }
@@ -162,7 +169,12 @@ impl InputSystem {
                     // adding prototype
                     match state.get_as_entity(&cmp, "prototype") {
                         Some(prototype) => {
-                            let newCmp = state.create_component_from_entity(&hovered_entity, &prototype, ::std::collections::HashMap::new()).unwrap();
+                            let newCmp =
+                                state.create_component_from_entity(
+                                    &hovered_entity,
+                                    &prototype,
+                                    ::std::collections::HashMap::new()
+                                ).unwrap();
                             state.set_component_parent(&newCmp, &cmp);
                         },
                         None => ()
@@ -171,7 +183,8 @@ impl InputSystem {
                     // executing onLeave script
                     match state.get_as_string(&cmp, "scriptOnEnter") {
                         None => (),
-                        Some(script) => { script::execute_mut(state, &cmp, &script.as_slice()).unwrap(); }
+                        Some(script) =>
+                            { script::execute_mut(state, &cmp, &script.as_slice()).unwrap(); }
                     };
                 }
             }
@@ -201,8 +214,17 @@ impl InputSystem {
                 match (children.len() != 0, pressed) {
                     (false, true) =>
                         {
-                            let owner = match state.get_owner(component) { Ok(o) => o, _ => return };
-                            let newCmp = state.create_component_from_entity(&owner, &prototype, ::std::collections::HashMap::new()).unwrap();
+                            let owner = match state.get_owner(component) {
+                                Ok(o) => o,
+                                _ => return
+                            };
+
+                            let newCmp =
+                                state.create_component_from_entity(
+                                    &owner,
+                                    &prototype,
+                                    ::std::collections::HashMap::new()
+                                ).unwrap();
                             state.set_component_parent(&newCmp, component);
                         },
 
