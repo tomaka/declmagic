@@ -10,7 +10,7 @@ use lua::any;
 pub mod loader;
 mod state;
 
-// TODO: ComponentID, EntityID must be associated types
+// TODO: totally rework this trait once associated types are implemented
 pub trait EntitiesHelper {
     /// Creates a new empty entity in the state.
     fn create_entity(&mut self, name: Option<String>, visible: bool) -> EntityID;
@@ -87,15 +87,26 @@ pub trait EntitiesHelper {
     fn get<'a>(&'a self, id: &ComponentID, field: &str)
         -> Result<&'a Data, StateError>;
 
+    /// Returns the value of a property of an entity.
+    /// Reads the appropriate "property" or "propertyView" component.
+    /// Returns Ok(Empty) if the property is not found.
     fn get_property_value(&self, id: &EntityID, propname: &str)
         -> Result<Data, StateError>
     {
         let value = self
-            .get_components_list().move_iter()
+            .get_visible_native_components("property").move_iter()
+            .chain(self.get_visible_native_components("propertyView").move_iter())
             .filter(|c| &self.get_owner(c).unwrap() == id)
-            .filter(|c| match self.get_type(c) { Ok(NativeComponentType(t)) => t.as_slice() == "property" || t.as_slice() == "propertyView", _ => false })
-            .filter(|c| match self.get(c, "property") { Ok(&String(ref n)) => n.as_slice() == propname, _ => false })
-            .max_by(|c| match self.get(c, "priority") { Ok(&::entities::Number(ref n)) => (((*n) * 1000f64) as int), _ => 1000 })
+            .filter(|c|
+                match self.get(c, "property").map(|c| c.as_string()) {
+                    Ok(Some(n)) => n.as_slice() == propname,
+                    _ => false
+                })
+            .max_by(|c|
+                match self.get(c, "priority").map(|c| c.as_number()) {
+                    Ok(Some(n)) => ((n * 1000f64) as int),
+                    _ => 1000
+                })
             .and_then(|c| {
                 let cmpType = match self.get_type(&c) {
                     Ok(NativeComponentType(t)) => t.clone(),
@@ -104,9 +115,17 @@ pub trait EntitiesHelper {
 
                 match cmpType.as_slice() {
                     "property" =>
-                        match self.get(&c, "value") { Ok(&FromProperty(_)) => None, Ok(n) => Some(n.clone()), _ => None },
+                        match self.get(&c, "value") {
+                            Ok(&FromProperty(_)) => None,
+                            Ok(n) => Some(n.clone()),
+                            _ => None
+                        },
                     "propertyView" => {
-                        let script = match self.get(&c, "script") { Ok(&FromProperty(_)) => return None, Ok(&String(ref n)) => n.clone(), _ => return None };
+                        let script = match self.get(&c, "script") {
+                            Ok(&FromProperty(_)) => return None,
+                            Ok(&String(ref n)) => n.clone(),
+                            _ => return None
+                        };
                         match ::script::execute(self, &c, &script) {
                             Ok(any::Number(val)) => Some(Number(val)),
                             Ok(any::String(val)) => Some(String(val)),
@@ -125,6 +144,8 @@ pub trait EntitiesHelper {
         }
     }
 
+    /// Gets the value of a field of the component.
+    /// Resolves it if the field is "FromProperty".
     fn get_and_resolve(&self, id: &ComponentID, field: &str)
         -> Result<Data, StateError>
     {
