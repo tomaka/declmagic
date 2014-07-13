@@ -80,6 +80,7 @@ pub enum Data {
     List(Vec<Data>),
     Entity(EntityID),
     FromProperty(String),
+    FromScript(String),
     Empty
 }
 

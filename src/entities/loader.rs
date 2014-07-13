@@ -244,6 +244,10 @@ fn load_data_entry(context: &mut LoadContext, element: &json::Json)
                 let requestedProp = match val.as_string() { Some(a) => a, None => return Err(WrongDataStructure(format!("Component data element object of type Property expects a string"))) };
                 super::FromProperty(requestedProp.to_string())
                 
+            } else if key.as_slice().eq_ignore_ascii_case("script") {
+                let script = match val.as_string() { Some(a) => a, None => return Err(WrongDataStructure(format!("Component data element object of type Script expects a string"))) };
+                super::FromScript(script.to_string())
+                
             } else {
                 return Err(WrongDataStructure(format!("Got invalid key for component data element object: {}", key)));
             }

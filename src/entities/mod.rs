@@ -1,6 +1,6 @@
 extern crate std;
 
-pub use self::state::{ EntitiesState, Data, EntityID, ComponentID, Number, String, Boolean, List, Entity, FromProperty, Empty };
+pub use self::state::{ EntitiesState, Data, EntityID, ComponentID, Number, String, Boolean, List, Entity, FromProperty, Empty, FromScript };
 pub use self::state::{ ComponentType, NativeComponentType, EntityComponentType };
 pub use self::state::{ StateError };
 
@@ -151,6 +151,15 @@ pub trait EntitiesHelper {
     {
         let propname = match try!(self.get(id, field)) {
             &FromProperty(ref p) => p,
+            &FromScript(ref script) => {
+                return match ::script::execute(self, id, script) {
+                    Ok(any::Number(val)) => Ok(Number(val)),
+                    Ok(any::String(val)) => Ok(String(val)),
+                    Ok(any::Boolean(val)) => Ok(Boolean(val)),
+                    Ok(_) => unimplemented!(),
+                    Err(e) => fail!("{}", e)
+                }
+            }
             a => return Ok(a.clone())
         };
 
