@@ -194,6 +194,23 @@ Units movement should be done by manipulating `requestedMovement`.
 
 ## Mechanics
 
+### childEntity
+
+**(not implemented)**
+
+Link to another entity.
+If the component is destroyed, the entity gets destroyed with it.
+If the entity is destroyed, the component gets destroyed with it.
+
+```rust
+{
+	"type": "childEntity",
+	"data": {
+		"entity": <entity>
+	}
+}
+```
+
 ### destination
 
 **(not implemented)**
