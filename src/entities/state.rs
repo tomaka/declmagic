@@ -185,7 +185,7 @@ impl EntitiesState {
         match self.get_component_by_id(inherit).unwrap().cmp_type.clone() {
             NativeComponentType(_) => (),
             EntityComponentType(entity) => {
-                let components_to_inherit: Vec<ComponentID> = self.get_entity_by_id(&entity).unwrap().components.iter().map(|c| c.clone()).collect();
+                let components_to_inherit: Vec<ComponentID> = self.get_entity_by_id(&entity).unwrap().components.iter().filter(|c| !self.has_parent(*c).unwrap()).map(|c| c.clone()).collect();
 
                 // inheriting components
                 for cmp in components_to_inherit.move_iter() {
@@ -238,6 +238,10 @@ impl EntitiesState {
             None => Err(ComponentNotFound(id.clone())),
             Some(c) => Ok(c)
         }
+    }
+
+    fn has_parent(&self, id: &ComponentID) -> Result<bool, StateError> {
+        Ok((try!(self.get_component_by_id(id))).parent.is_some())
     }
 }
 
@@ -340,7 +344,9 @@ impl EntitiesHelper for EntitiesState {
         self.get_entity_by_id_mut(typename).unwrap().components_of_type.push(newID);
 
         // creating the list of components to inherit
-        let components_to_inherit: Vec<ComponentID> = self.get_entity_by_id(typename).unwrap().components.iter().map(|c| c.clone()).collect();
+        let components_to_inherit: Vec<ComponentID> =
+            self.get_entity_by_id(typename).unwrap().components
+            .iter().filter(|c| !self.has_parent(*c).unwrap()).map(|c| c.clone()).collect();
 
         self.components.insert(newID, newComponent);
         match &mut self.next_component_id { &ComponentID(ref mut id) => (*id) += 1 };
