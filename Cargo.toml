@@ -12,6 +12,9 @@ name = "declmagic"
 [dependencies.rust-hl-lua]
 git = "https://github.com/tomaka/rust-hl-lua"
 
+[dependencies.nphysics]
+git = "https://github.com/sebcrozet/nphysics"
+
 #[dependencies.gl]
 #git = "https://github.com/bjz/gl-rs"
 
