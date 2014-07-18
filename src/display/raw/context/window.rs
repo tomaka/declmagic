@@ -215,7 +215,7 @@ impl Window {
         let txBox = box tx;
 
         let mut handle = unsafe {
-            let txRef: &Sender<WindowEvent> = txBox;
+            let txRef: &Sender<WindowEvent> = &*txBox;
             let txPtr: *const Sender<WindowEvent> = transmute(txRef);
 
             commands.exec(proc() {
