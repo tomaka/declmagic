@@ -15,8 +15,8 @@ git = "https://github.com/tomaka/rust-hl-lua"
 [dependencies.nphysics]
 git = "https://github.com/sebcrozet/nphysics"
 
-#[dependencies.gl]
-#git = "https://github.com/bjz/gl-rs"
+[dependencies.gl]
+path = "deps/gl"
 
 #[dependencies.glfw]
 #git = "https://github.com/bjz/glfw-rs"
