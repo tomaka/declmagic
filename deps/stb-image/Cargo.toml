@@ -1,0 +1,11 @@
+[project]
+
+name = "stb_image"
+version = "0.0.1"
+authors = []
+tags = []
+build = "make"
+
+[[lib]]
+name = "stb_image"
+path = "lib.rs"

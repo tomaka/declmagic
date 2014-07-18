@@ -4,7 +4,6 @@ name = "declmagic"
 version = "0.0.1"
 authors = ["Pierre Krieger <pierre.krieger1708@gmail.com>"]
 tags = []
-build = "make"
 
 [[lib]]
 name = "declmagic"
@@ -17,6 +16,9 @@ git = "https://github.com/sebcrozet/nphysics"
 
 [dependencies.gl]
 path = "deps/gl"
+
+[dependencies.stb_image]
+path = "deps/stb-image"
 
 #[dependencies.glfw]
 #git = "https://github.com/bjz/glfw-rs"
