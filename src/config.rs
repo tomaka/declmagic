@@ -5,7 +5,7 @@ pub trait ConfigValue: Send + Clone + Show {
 }
 
 pub struct Config {
-	params: HashMap<String, Box<ConfigValue>>
+    params: HashMap<String, Box<ConfigValue>>
 }
 
 impl ConfigValue for int {}
