@@ -19,7 +19,7 @@ impl PhysicsSystem {
         -> PhysicsSystem
     {
         let mut world = World::new();
-        world.set_gravity(Vec2::new(0.0f32, -9.8));
+        world.set_gravity(Vec2::new(1.0f32, 1.0));
 
         let shape = ::ncollide::geom::Plane::new(Vec2::new(0.0f32, 1.0));
         let body = Rc::new(RefCell::new(RigidBody::new_static(shape, 0.3, 0.6)));
@@ -78,7 +78,7 @@ impl PhysicsSystem {
 
             if requestedMovement.is_some() && requestedMovement != Some(movement) {
                 let acceleration = na::normalize(&(requestedMovement.unwrap() - movement)) * 5.0f32;
-                borrowedBody.set_lin_acc(acceleration);
+                borrowedBody.set_lin_acc_scale(acceleration);
             }
         }
 
