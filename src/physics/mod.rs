@@ -176,8 +176,8 @@ impl PhysicsSystem {
 
         for cmp in list.iter()
         {
-            state.set(cmp, "x", ::entities::Number(pos.x as f64));
-            state.set(cmp, "y", ::entities::Number(pos.y as f64));
+            state.set(cmp, "x", ::entities::Number(pos.x as f64 / list.len() as f64));
+            state.set(cmp, "y", ::entities::Number(pos.y as f64 / list.len() as f64));
         }
     }
 
@@ -195,8 +195,8 @@ impl PhysicsSystem {
 
         for cmp in list.iter()
         {
-            state.set(cmp, "x", ::entities::Number(pos.x as f64));
-            state.set(cmp, "y", ::entities::Number(pos.y as f64));
+            state.set(cmp, "x", ::entities::Number(pos.x as f64 / list.len() as f64));
+            state.set(cmp, "y", ::entities::Number(pos.y as f64 / list.len() as f64));
         }
     }
 }
