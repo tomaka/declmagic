@@ -94,7 +94,7 @@ impl InputSystem {
             .filter_map(|component| {
                 let entity = match state.get_owner(&component) { Ok(t) => t, _ => return None };
                 let entity_position =
-                    ::physics::PhysicsSystem::get_entity_position(state, &entity);
+                    ::physics::get_entity_position(state, &entity);
 
                 let coord1 = match (state.get_as_number(&component, "leftX"),
                                     state.get_as_number(&component, "bottomY"))

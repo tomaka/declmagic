@@ -8,7 +8,7 @@ Determines the position of the entity.
 
 If there are multiple `position` components, the position of the entity is the sum of all the components.
 
-The values in this component are updated when the game runs.
+The values in this component are updated when the game runs if `autoupdate` is true.
 
 ```rust
 {
@@ -16,7 +16,8 @@ The values in this component are updated when the game runs.
 	"data": {
 		"x": <number (optional)>,
 		"y": <number (optional)>,
-		"z": <number (optional)>
+		"z": <number (optional)>,
+		"autoupdate": <boolean (optional, default true)>
 	}
 }
 ```
@@ -153,7 +154,8 @@ The values in this component are updated when the game runs.
 	"data": {
 		"x": <number (optional)>,
 		"y": <number (optional)>,
-		"z": <number (optional)>
+		"z": <number (optional)>,
+		"autoupdate": <boolean (optional, default true)>
 	}
 }
 ```

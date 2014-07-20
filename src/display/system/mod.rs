@@ -43,7 +43,7 @@ impl DisplaySystem {
         });
 
         for (cmp, &(ref sprite, _)) in self.sprites.iter() {
-            let pos = physics::PhysicsSystem::get_entity_position(state,
+            let pos = physics::get_entity_position(state,
                 &state.get_owner(cmp).unwrap());
             let translationMatrix = na::Mat4::new(
                 1.0, 0.0, 0.0, 0.0,
@@ -170,7 +170,7 @@ impl DisplaySystem {
             *matrixData.get(11), *matrixData.get(12), *matrixData.get(13), *matrixData.get(14),
             *matrixData.get(15));
 
-        let position = physics::PhysicsSystem::get_entity_position(state,
+        let position = physics::get_entity_position(state,
             &state.get_owner(&cameraComponent).unwrap());
 
         let positionMatrix = na::Mat4::new(
