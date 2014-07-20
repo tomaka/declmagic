@@ -23,7 +23,7 @@ impl PhysicsSystem {
 
         let shape = ::ncollide::geom::Plane::new(Vec2::new(0.0f32, 1.0));
         let body = Rc::new(RefCell::new(RigidBody::new_static(shape, 0.3, 0.6)));
-        world.add_body(body);
+        //world.add_body(body);
 
         PhysicsSystem {
             world: world,
@@ -60,6 +60,7 @@ impl PhysicsSystem {
                 // initializing body with current position and movement
                 body.borrow_mut().set_translation({ let p = get_entity_position(state, &e); na::Vec2::new(p.x,p.y) });
                 body.borrow_mut().set_lin_vel({ let p = get_entity_movement(state, &e); na::Vec2::new(p.x,p.y) });
+                body.borrow_mut().set_lin_acc_scale(na::Vec2::new(0.0, 0.0));
 
                 self.bodies.insert(e.clone(), body.clone());
                 self.world.add_body(body.clone());
