@@ -97,6 +97,8 @@ impl PhysicsSystem {
 pub fn get_entity_position(state: &EntitiesState, id: &EntityID)
     -> na::Vec3<f32>
 {
+    use std::iter::AdditiveIterator;
+
     state
         .get_visible_native_components("position")
         .move_iter()
@@ -114,13 +116,15 @@ pub fn get_entity_position(state: &EntitiesState, id: &EntityID)
         })
 
         // add all the elements together
-        .fold(na::Vec3::new(0.0, 0.0, 0.0), |vec, a| vec + a)
+        .sum()
 }
 
 /// Returns the total movement of an entity.
 pub fn get_entity_movement(state: &EntitiesState, id: &EntityID)
     -> na::Vec3<f32>
 {
+    use std::iter::AdditiveIterator;
+
     state
         .get_visible_native_components("movement")
         .move_iter()
@@ -138,7 +142,7 @@ pub fn get_entity_movement(state: &EntitiesState, id: &EntityID)
         })
 
         // add all the elements together
-        .fold(na::Vec3::new(0.0, 0.0, 0.0), |vec, a| vec + a)
+        .sum()
 }
 
 /// returns the total requested movement of an entity
