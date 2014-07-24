@@ -21,8 +21,8 @@ impl PhysicsSystem {
         let mut world = World::new();
         world.set_gravity(Vec2::new(1.0f32, 1.0));
 
-        let shape = ::ncollide::geom::Plane::new(Vec2::new(0.0f32, 1.0));
-        let body = Rc::new(RefCell::new(RigidBody::new_static(shape, 0.3, 0.6)));
+        //let shape = ::ncollide::geom::Plane::new(Vec2::new(0.0f32, 1.0));
+        //let body = Rc::new(RefCell::new(RigidBody::new_static(shape, 0.3, 0.6)));
         //world.add_body(body);
 
         PhysicsSystem {
@@ -76,10 +76,23 @@ impl PhysicsSystem {
             let mut borrowedBody = body.borrow_mut();
             borrowedBody.set_translation(position);
             borrowedBody.set_lin_vel(movement);
+            borrowedBody.activate(100.0);       // objects tend to deactivate too often
 
-            if requestedMovement.is_some() && requestedMovement != Some(movement) {
-                let acceleration = na::normalize(&(requestedMovement.unwrap() - movement));
-                borrowedBody.set_lin_acc_scale(acceleration);
+            if requestedMovement.is_some() {
+                let requestedMovement = requestedMovement.unwrap();
+
+                let acceleration: Vec2<f32> = Vec2::new(
+                    if requestedMovement.x < 0.0 && requestedMovement.x < movement.x { -1.0 }
+                    else if requestedMovement.x > 0.0 && requestedMovement.x > movement.x { 1.0 }
+                    else { 0.0 },
+                    if requestedMovement.y < 0.0 && requestedMovement.y < movement.y { -1.0 }
+                    else if requestedMovement.y > 0.0 && requestedMovement.y > movement.y { 1.0 }
+                    else { 0.0 }
+                );
+
+                if acceleration != borrowedBody.lin_acc_scale() {
+                    borrowedBody.set_lin_acc_scale(acceleration);
+                }
             }
         }
 
